@@ -433,3 +433,12 @@ export async function deleteApplicationAction(applicationId: string) {
   if (res.ok) redirect("/app?deleted=1");
   return res;
 }
+
+export async function aiConsistencyAction(applicationId: string) {
+  return run(async () => {
+    await requireApplication(applicationId, "EDITOR");
+    const issues = await AS.aiConsistencyCheck(applicationId);
+    rv(applicationId);
+    return { count: issues.length };
+  });
+}

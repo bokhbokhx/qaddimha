@@ -239,3 +239,39 @@ export async function draftAnswers(applicationId: string) {
   });
   return { ...r, overLimit: r.data.answers.filter((a) => { const q = qs.find((x) => x.id === a.questionId); return q && !checkLimit(a.content, q.limitType, q.limitValue).withinLimit; }).length };
 }
+
+/**
+ * فحص اتساق إضافي بالمساعد. نتائجه ملاحظات غير ملزمة تُعرض كتنبيهات للتحقق، ولا تغيّر الجاهزية.
+ * الفحوص البرمجية (الحتمية) تبقى المرجع للعوائق.
+ */
+export async function aiConsistencyCheck(applicationId: string) {
+  const { buildSnapshot } = await import("./snapshot");
+  const { computeReadiness } = await import("@/lib/domain/readiness");
+  const { ConsistencySchema } = await import("@/lib/ai/schemas");
+  const app = await db.application.findUniqueOrThrow({ where: { id: applicationId } });
+  const s = await buildSnapshot(applicationId);
+  const text = [
+    `المستفيدون: ${s.application.beneficiaryCount ?? "؟"} · المدة: ${s.application.durationMonths ?? "؟"} شهرًا · المنطقة: ${s.application.region ?? "؟"}`,
+    ...s.sections.map((x) => `## ${x.key}\n${x.content}`),
+    "## الأنشطة", ...s.activities.map((a) => `${a.code} ${a.name} (${a.startMonth}-${a.endMonth})`),
+    "## المؤشرات", ...s.indicators.map((i) => `${i.type} ${i.name}: ${i.target} ${i.unit} — نشاط: ${s.activities.find((a) => a.id === i.activityId)?.code ?? "لا يوجد"}`),
+    "## الميزانية", ...s.budgetLines.map((l) => `${l.item}: ${l.totalHalalas} هللة — ${l.fundingSource}`),
+    "## الإجابات", ...s.questions.map((q) => `${q.text}: ${q.answer?.content ?? ""}`),
+  ].join("\n");
+  const r = await runAITask({
+    task: "consistency_check",
+    organizationId: app.organizationId,
+    applicationId,
+    input: { t: text },
+    prompt: text,
+    schema: ConsistencySchema,
+    demo: () => {
+      throw new AIProviderError("DEMO_UNSUPPORTED", "فحص الاتساق بالمساعد يحتاج تفعيل المزود. الفحوص البرمجية المعروضة في هذه الصفحة تعمل في كل الأوضاع.");
+    },
+  });
+  const readiness = computeReadiness(s);
+  await db.readinessCheck.create({
+    data: { applicationId, ready: readiness.ready, completionPct: readiness.completionPct, result: { aiIssues: r.data.issues, provider: r.provider } as Prisma.InputJsonValue },
+  });
+  return r.data.issues;
+}

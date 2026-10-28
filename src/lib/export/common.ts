@@ -12,6 +12,25 @@ export interface ExportMeta {
   isDraft: boolean;
   draftReason: string | null;
   isDemo: boolean;
+  brand?: Brand;
+}
+
+/** هوية الجمعية البصرية في المخرجات: لون أساسي وشعار (صور آمنة فقط) */
+export interface Brand {
+  primary: string;
+  logo: { buffer: Buffer; type: "png" | "jpg" | "webp" } | null;
+}
+
+export function brandColor(m: ExportMeta) {
+  const c = m.brand?.primary ?? "";
+  return /^#[0-9a-fA-F]{6}$/.test(c) ? c : "#0f3d2e";
+}
+
+export function logoDataUri(m: ExportMeta) {
+  const l = m.brand?.logo;
+  if (!l) return null;
+  const mime = l.type === "jpg" ? "image/jpeg" : `image/${l.type}`;
+  return `data:${mime};base64,${l.buffer.toString("base64")}`;
 }
 
 export function metaLine(m: ExportMeta) {

@@ -723,3 +723,31 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
 }
+
+// دعوة عضو إلى الجمعية — الرمز يُعرض مرة واحدة، وتجزئته فقط تُخزن
+model Invitation {
+  id             String     @id @default(cuid())
+  organizationId String
+  email          String
+  role           MemberRole
+  tokenHash      String     @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime   @default(now())
+
+  @@index([organizationId])
+}
+
+// رمز إعادة تعيين كلمة المرور — صالح لمرة واحدة ولمدة قصيرة
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}

@@ -214,3 +214,38 @@ test("القارئ لا يرى أزرار التعديل ومستخدم جمعي
   const exp = await page.request.get(`${href}/export`);
   expect(await exp.text()).not.toContain("الملخص التنفيذي");
 });
+
+test("دعوة عضو جديد وإعادة تعيين كلمة المرور", async ({ page }) => {
+  await login(page, "owner@demo.qaddimha.test");
+  await page.goto("/app/organization/members");
+  const email = `editor-${Date.now()}@demo.qaddimha.test`;
+  await page.fill("#inv-email", email);
+  await page.selectOption("#inv-role", "EDITOR");
+  await page.getByRole("button", { name: "إنشاء دعوة" }).click();
+  const link = await page.locator("code").first().textContent();
+  expect(link).toContain("/invite/");
+
+  await page.context().clearCookies();
+  await page.goto(new URL(link!).pathname);
+  await expect(page.getByRole("heading", { name: /دعوة للانضمام/ })).toBeVisible();
+  await page.fill("#name", "محرر جديد");
+  await page.fill("#password", "Editor#Pass2026");
+  await page.getByRole("button", { name: "إنشاء الحساب والانضمام" }).click();
+  await page.waitForURL("**/app");
+  await expect(page.getByText("محرر جديد · محرر")).toBeVisible();
+
+  // نسيت كلمة المرور (رابط بيئة التطوير لغياب مزود البريد)
+  await page.context().clearCookies();
+  await page.goto("/forgot-password");
+  await page.fill("#email", email);
+  await page.getByRole("button", { name: "أرسل رابط إعادة التعيين" }).click();
+  await page.getByRole("link", { name: "افتح رابط إعادة التعيين" }).click();
+  await page.fill("#password", "Editor#New2026x");
+  await page.fill("#confirm", "Editor#New2026x");
+  await page.getByRole("button", { name: "حفظ كلمة المرور" }).click();
+  await page.waitForURL(/\/login\?reset=1/);
+  await page.fill("#email", email);
+  await page.fill("#password", "Editor#New2026x");
+  await page.click("button[type=submit]");
+  await page.waitForURL("**/app");
+});

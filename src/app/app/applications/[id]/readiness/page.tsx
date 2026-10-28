@@ -4,13 +4,18 @@ import { buildSnapshot } from "@/lib/services/snapshot";
 import { computeReadiness, GROUP_LABEL } from "@/lib/domain/readiness";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui";
 import { ApproveRevision } from "@/components/client/approve";
-import { approveRevisionAction } from "../../../../actions/app";
+import { aiConsistencyAction, approveRevisionAction } from "../../../../actions/app";
+import { ActionButton } from "@/components/client/action-button";
+import { db } from "@/lib/db";
+import { formatDateTime } from "@/lib/format";
 
 export default async function ReadinessPage(props: PageProps<"/app/applications/[id]/readiness">) {
   const { id } = await props.params;
   const ctx = await appPageContext(id);
   const s = await buildSnapshot(id);
   const r = computeReadiness(s);
+  const lastAi = await db.readinessCheck.findFirst({ where: { applicationId: id }, orderBy: { createdAt: "desc" } });
+  const aiIssues = ((lastAi?.result as { aiIssues?: { severity: string; message: string; sectionKey: string | null }[] } | null)?.aiIssues) ?? null;
   const link = (l: string) => (l.startsWith("/") ? l : `/app/applications/${id}/${l}`);
   return (
     <div className="space-y-6">
@@ -54,6 +59,21 @@ export default async function ReadinessPage(props: PageProps<"/app/applications/
           </ul>
         </Card>
       )}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-brand-900">فحص إضافي بالمساعد</h2>
+          {ctx.canEdit && <ActionButton size="sm" variant="secondary" label="افحص الاتساق بالمساعد" pendingLabel="جارٍ الفحص…" action={aiConsistencyAction.bind(null, id)} />}
+        </div>
+        <p className="mt-1 text-xs text-muted">ملاحظات غير ملزمة للتحقق منها (مثل ادعاءات بلا مصدر أو تناقضات نصية). لا تغيّر حالة الجاهزية؛ العوائق أعلاه تُحسب برمجيًا.</p>
+        {aiIssues && (
+          <div className="mt-3">
+            <div className="mb-1 text-xs text-muted">آخر فحص: {formatDateTime(lastAi!.createdAt)}</div>
+            {aiIssues.length === 0 ? <p className="text-sm text-ok-700">لم يجد المساعد ملاحظات إضافية.</p> : (
+              <ul className="space-y-1 text-sm">{aiIssues.map((i, n) => <li key={n}><Badge tone={i.severity === "blocker" ? "danger" : "warn"}>{i.severity === "blocker" ? "مهم" : "تنبيه"}</Badge> {i.message}</li>)}</ul>
+            )}
+          </div>
+        )}
+      </Card>
       <Card>
         <h2 className="mb-2 text-lg font-bold text-brand-900">المرفقات</h2>
         <ul className="space-y-1 text-sm">

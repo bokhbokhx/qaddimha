@@ -19,11 +19,12 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <nav aria-label="التنقل الرئيسي" className="flex gap-1 text-sm">
               <Link href="/app" className="rounded-lg px-3 py-1.5 hover:bg-brand-50">الطلبات</Link>
               <Link href="/app/organization" className="rounded-lg px-3 py-1.5 hover:bg-brand-50">ملف الجمعية</Link>
+              <Link href="/app/organization/members" className="rounded-lg px-3 py-1.5 hover:bg-brand-50">الأعضاء</Link>
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">
             <OrgSwitcher current={ctx.orgId} orgs={ctx.memberships.map((m) => ({ id: m.organizationId, name: m.organization.displayName }))} />
-            <span className="text-muted">{ctx.user.name} · {ROLE[ctx.membership.role]}</span>
+            <Link href="/app/account" className="text-muted hover:underline">{ctx.user.name} · {ROLE[ctx.membership.role]}</Link>
             <form action={logoutAction}><button type="submit" className="rounded-lg px-2 py-1 text-brand-700 hover:bg-brand-50">خروج</button></form>
           </div>
         </div>

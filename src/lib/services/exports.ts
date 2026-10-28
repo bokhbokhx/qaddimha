@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 import { computeReadiness } from "@/lib/domain/readiness";
-import { exportModel, type ExportMeta } from "@/lib/export/common";
+import { exportModel, type Brand, type ExportMeta } from "@/lib/export/common";
 import { checklistHtml, projectDocumentHtml, summaryHtml } from "@/lib/export/html";
 import { htmlToPdf } from "@/lib/export/pdf";
 import { projectDocx } from "@/lib/export/docx";
@@ -33,6 +33,7 @@ export async function generateExportPackage(applicationId: string, revisionId: s
   const model = exportModel(s);
   const readiness = computeReadiness(s);
   const paid = await isPackagePaid(applicationId);
+  const brand = await loadBrand(s.organization.id);
   const isDraft = !readiness.ready || !paid;
   const meta: ExportMeta = {
     revisionNumber: rev.number,
@@ -42,6 +43,7 @@ export async function generateExportPackage(applicationId: string, revisionId: s
     isDraft,
     draftReason: !readiness.ready ? `توجد ${readiness.blockers.length} عوائق` : !paid ? "معاينة قبل شراء الحزمة" : null,
     isDemo: s.organization.isDemo || s.opportunity.isDemo,
+    brand,
   };
   const footer = `Rev ${rev.number}${isDraft ? " — DRAFT" : ""}`;
   const buffers: Record<string, Buffer> = {
@@ -67,4 +69,22 @@ export async function generateExportPackage(applicationId: string, revisionId: s
   const app = await db.application.findUniqueOrThrow({ where: { id: applicationId }, select: { organizationId: true } });
   await audit({ organizationId: app.organizationId, userId, action: "export.generate", targetType: "Revision", targetId: rev.id });
   return { exports: created, isDraft, meta };
+}
+
+/** الهوية البصرية الحالية للجمعية — الشعار يُقرأ من التخزين الخاص (صور PNG/JPEG/WEBP فقط) */
+async function loadBrand(organizationId: string): Promise<Brand> {
+  const profile = await db.organizationProfile.findUnique({ where: { organizationId } });
+  let logo: Brand["logo"] = null;
+  if (profile?.logoDocumentId) {
+    const doc = await db.document.findFirst({ where: { id: profile.logoDocumentId, organizationId, kind: "LOGO" } });
+    const type = doc?.mimeType === "image/png" ? "png" : doc?.mimeType === "image/jpeg" ? "jpg" : doc?.mimeType === "image/webp" ? "webp" : null;
+    if (doc && type) {
+      try {
+        logo = { buffer: await storage.get(doc.storageKey), type };
+      } catch {
+        logo = null;
+      }
+    }
+  }
+  return { primary: profile?.primaryColor ?? "#0f3d2e", logo };
 }

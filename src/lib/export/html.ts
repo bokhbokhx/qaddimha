@@ -1,6 +1,6 @@
 import "server-only";
 import { embeddedFontCss } from "./fonts";
-import { DEMO_EXPORT_NOTICE, metaLine, type ExportMeta, type ExportModel } from "./common";
+import { brandColor, DEMO_EXPORT_NOTICE, logoDataUri, metaLine, type ExportMeta, type ExportModel } from "./common";
 import { GROUP_LABEL } from "@/lib/domain/readiness";
 
 const esc = (s: unknown) =>
@@ -8,13 +8,14 @@ const esc = (s: unknown) =>
 const para = (s: string) => (s.trim() ? s.split(/\n+/).map((p) => `<p>${esc(p)}</p>`).join("") : `<p class="muted">— لم يُستكمل —</p>`);
 
 function base(title: string, body: string, m: ExportMeta, extraCss = "") {
+  const c = brandColor(m);
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
 ${embeddedFontCss()}
 @page{size:A4;margin:18mm 16mm 20mm 16mm}
 *{box-sizing:border-box}
 body{font-family:'Plex',sans-serif;color:#1c2b25;font-size:11pt;line-height:1.75;margin:0}
-h1{font-size:20pt;color:#0f3d2e;margin:0 0 6pt}
-h2{font-size:14pt;color:#0f3d2e;border-bottom:1.5pt solid #b8903a;padding-bottom:3pt;margin:18pt 0 8pt;break-after:avoid}
+h1{font-size:20pt;color:${c};margin:0 0 6pt}
+h2{font-size:14pt;color:${c};border-bottom:1.5pt solid #b8903a;padding-bottom:3pt;margin:18pt 0 8pt;break-after:avoid}
 h3{font-size:12pt;margin:12pt 0 4pt;break-after:avoid}
 p{margin:0 0 6pt;text-align:justify}
 .muted{color:#6b7a73}
@@ -22,7 +23,7 @@ p{margin:0 0 6pt;text-align:justify}
 .demo{font-size:9pt;color:#7a5b12;background:#fbf3df;border:1pt solid #e7cf8f;padding:4pt 8pt;border-radius:4pt;margin:6pt 0}
 table{width:100%;border-collapse:collapse;margin:6pt 0 10pt;font-size:9.5pt;break-inside:auto}
 th,td{border:0.75pt solid #c9c2b2;padding:4pt 5pt;text-align:right;vertical-align:top}
-th{background:#0f3d2e;color:#fff;font-weight:700}
+th{background:${c};color:#fff;font-weight:700}
 tr{break-inside:avoid}
 td.num{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
 .ltr{direction:ltr;unicode-bidi:isolate}
@@ -31,6 +32,8 @@ td.num{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tab
 .cover .org{font-size:13pt;color:#4b5b54}
 .badge{display:inline-block;padding:1pt 6pt;border-radius:8pt;font-size:8.5pt;background:#e9efe9}
 .badge.bad{background:#f7e3df;color:#8c2a1b}.badge.ok{background:#dcefe2;color:#14532d}.badge.warn{background:#fbf3df;color:#7a5b12}
+.logo{max-height:22mm;max-width:50mm;object-fit:contain;margin-bottom:6mm}
+.logo-sm{max-height:12mm;max-width:30mm;object-fit:contain;float:left}
 ${extraCss}
 </style></head><body>${m.isDraft ? `<div class="watermark">مسودة</div>` : ""}${body}</body></html>`;
 }
@@ -38,6 +41,7 @@ ${extraCss}
 export function projectDocumentHtml(x: ExportModel, m: ExportMeta) {
   const body = `
 <section class="cover">
+  ${logoDataUri(m) ? `<img class="logo" src="${logoDataUri(m)}" alt="">` : ""}
   <div class="org">${esc(x.org)}</div>
   <h1>${esc(x.title)}</h1>
   <div>مقدم إلى: ${esc(x.funder)} — ${esc(x.grant)}</div>
@@ -73,7 +77,7 @@ export function summaryHtml(x: ExportModel, m: ExportMeta) {
   const summary = x.sections.find((s) => s.key === "summary")?.content ?? "";
   const objectives = x.sections.find((s) => s.key === "objectives")?.content ?? "";
   const body = `
-<h1 style="font-size:16pt">${esc(x.title)}</h1>
+${logoDataUri(m) ? `<img class="logo-sm" src="${logoDataUri(m)}" alt="">` : ""}<h1 style="font-size:16pt">${esc(x.title)}</h1>
 <div class="muted">${esc(x.org)} — ${esc(x.funder)}</div>
 <div class="meta">${esc(metaLine(m))}</div>
 ${m.isDemo ? `<div class="demo">${DEMO_EXPORT_NOTICE}</div>` : ""}

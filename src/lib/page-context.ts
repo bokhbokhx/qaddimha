@@ -10,7 +10,7 @@ export async function orgPageContext() {
   const memberships = await db.membership.findMany({ where: { userId: user.id }, include: { organization: true }, orderBy: { createdAt: "asc" } });
   if (!memberships.length) {
     if (user.platformRole === "ADMIN") redirect("/ops");
-    redirect("/login");
+    redirect("/no-organization");
   }
   const membership = memberships.find((m) => m.organizationId === activeOrganizationId) ?? memberships[0];
   return { user, memberships, membership, org: membership.organization, orgId: membership.organizationId, canEdit: membership.role !== "VIEWER", isOwner: membership.role === "OWNER" };

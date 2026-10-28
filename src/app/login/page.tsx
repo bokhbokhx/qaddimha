@@ -16,7 +16,9 @@ export default async function LoginPage(props: PageProps<"/login">) {
       <div className="mt-6 rounded-2xl border border-line bg-white p-6">
         <LoginForm next={typeof sp.next === "string" ? sp.next : undefined} />
       </div>
-      <p className="mt-4 text-sm text-muted">ليس لديك حساب؟ <Link href="/signup" className="text-brand-700 underline">أنشئ حسابًا</Link></p>
+      {sp.reset && <p role="status" className="mt-4 rounded-lg bg-ok-50 p-2 text-sm text-ok-700">تم تعيين كلمة المرور الجديدة. سجّل الدخول.</p>}
+      <p className="mt-4 text-sm"><Link href="/forgot-password" className="text-brand-700 underline">نسيت كلمة المرور؟</Link></p>
+      <p className="mt-2 text-sm text-muted">ليس لديك حساب؟ <Link href="/signup" className="text-brand-700 underline">أنشئ حسابًا</Link></p>
       {showDemo && (
         <div className="mt-6 rounded-xl bg-gold-100 p-4 text-sm text-gold-600">
           <div className="font-bold">حسابات تجريبية (بيئة التطوير فقط)</div>
