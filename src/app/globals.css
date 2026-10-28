@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/500.css";
+@import "@fontsource/ibm-plex-sans-arabic/700.css";
+
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", "Tajawal", Tahoma, "Segoe UI", sans-serif;
+  --color-ink: #1c2b25;
+  --color-muted: #5b6b64;
+  --color-paper: #faf7f0;
+  --color-card: #ffffff;
+  --color-line: #e3ddcf;
+  --color-brand-50: #eef5f0;
+  --color-brand-100: #d7e8dc;
+  --color-brand-200: #b0d0ba;
+  --color-brand-600: #1f6b4a;
+  --color-brand-700: #175a3d;
+  --color-brand-800: #124a32;
+  --color-brand-900: #0f3d2e;
+  --color-gold-100: #f7eed8;
+  --color-gold-400: #d6b25e;
+  --color-gold-600: #a07a2c;
+  --color-danger-50: #fbecea;
+  --color-danger-700: #8c2a1b;
+  --color-warn-50: #fbf3df;
+  --color-warn-700: #7a5b12;
+  --color-ok-50: #e6f2ea;
+  --color-ok-700: #14532d;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  line-height: 1.7;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-gold-400);
+  outline-offset: 2px;
+}
+
+/* النص الإنجليزي والأرقام والروابط داخل سياق عربي */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+bdi,
+.isolate-text {
+  unicode-bidi: isolate;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+dialog::backdrop {
+  background: rgb(15 61 46 / 0.35);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

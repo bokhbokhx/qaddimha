@@ -1,0 +1,733 @@
+// نموذج بيانات «قدمها»
+// المبالغ تُخزَّن بالهللة (BigInt) لتفادي أخطاء الفاصلة العائمة.
+// الأوقات تُخزَّن UTC وتُعرض بتوقيت Asia/Riyadh.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlatformRole {
+  USER
+  EXPERT
+  ADMIN
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  platformRole PlatformRole @default(USER)
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  sessions     Session[]
+}
+
+model Session {
+  id                   String   @id // SHA-256 للرمز، الرمز نفسه لا يُخزَّن
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+  expiresAt            DateTime
+  createdAt            DateTime @default(now())
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  key       String // بريد أو عنوان — للحد من المحاولات
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+model Organization {
+  id            String               @id @default(cuid())
+  displayName   String
+  isDemo        Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  memberships   Membership[]
+  profile       OrganizationProfile?
+  facts         Fact[]
+  documents     Document[]
+  opportunities FundingOpportunity[]
+  applications  Application[]
+  orders        Order[]
+  aiJobs        AIJob[]
+  auditLogs     AuditLog[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MemberRole
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+model OrganizationProfile {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  version        Int          @default(1)
+  logoDocumentId String?
+  primaryColor   String?
+  secondaryColor String?
+  updatedAt      DateTime     @updatedAt
+}
+
+enum FactScope {
+  ORG_PROFILE
+  OPPORTUNITY
+}
+
+enum FactStatus {
+  EXTRACTED_UNCONFIRMED // مستخرجة تحتاج تأكيدًا
+  CONFIRMED // مؤكدة من المستخدم
+  MISSING // ناقصة
+  CONFLICT // متعارضة بين مصادر
+}
+
+enum SourceType {
+  DOCUMENT
+  USER
+  AI_SUGGESTION
+  DEMO_SEED
+}
+
+// معلومة مع مصدرها — تُستخدم لملف الجمعية ولبيانات المنحة
+model Fact {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scope          FactScope
+  opportunityId  String?
+  opportunity    FundingOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  key            String
+  value          Json?
+  status         FactStatus
+  sourceType     SourceType
+  sourceDocId    String?
+  sourceLocator  String?
+  sourceExcerpt  String?
+  // بدائل عند التعارض: [{value, sourceDocId, sourceLocator, sourceExcerpt}]
+  alternatives   Json?
+  confirmedById  String?
+  confirmedAt    DateTime?
+  updatedAt      DateTime            @updatedAt
+  createdAt      DateTime            @default(now())
+
+  // "org" لملف الجمعية أو معرف الفرصة — لتجنب NULL في القيد الفريد
+  scopeRef String
+
+  @@unique([organizationId, scopeRef, key])
+  @@index([opportunityId])
+}
+
+enum DocumentKind {
+  ORG_DOC
+  ORG_LICENSE
+  ORG_FINANCIAL
+  ORG_PROFILE_DECK
+  LOGO
+  GRANT_GUIDE
+  GRANT_FORM
+  BUDGET_SHEET
+  PARTNER_EVIDENCE
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADED
+  EXTRACTING
+  EXTRACTED
+  FAILED
+}
+
+model Document {
+  id              String               @id @default(cuid())
+  organizationId  String
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  opportunityId   String?
+  opportunity     FundingOpportunity?  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  kind            DocumentKind
+  label           String?
+  filename        String
+  mimeType        String
+  size            Int
+  storageKey      String               @unique
+  sha256          String
+  status          DocumentStatus       @default(UPLOADED)
+  extractionError String?
+  pageCount       Int?
+  expiresOn       DateTime?
+  uploadedById    String
+  createdAt       DateTime             @default(now())
+  chunks          DocumentChunk[]
+  extractions     DocumentExtraction[]
+
+  @@index([organizationId])
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  index      Int
+  locator    String // مثال: «صفحة 2، فقرة 3»
+  text       String
+
+  @@index([documentId, index])
+}
+
+enum ExtractionStatus {
+  PENDING_REVIEW
+  APPLIED
+  DISCARDED
+  FAILED
+}
+
+model DocumentExtraction {
+  id         String           @id @default(cuid())
+  documentId String
+  document   Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  target     FactScope
+  aiJobId    String?
+  result     Json?
+  status     ExtractionStatus @default(PENDING_REVIEW)
+  createdAt  DateTime         @default(now())
+}
+
+model FundingOpportunity {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  funderName     String
+  title          String
+  referenceUrl   String?
+  pastedText     String?
+  isDemo         Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  facts          Fact[]
+  documents      Document[]
+  requirements   Requirement[]
+  questions      FormQuestion[]
+  applications   Application[]
+}
+
+enum RequirementCategory {
+  ORG_ELIGIBILITY // أهلية الجمعية
+  PROJECT_FIT // ملاءمة المشروع
+  DOCUMENT // مستند مطلوب
+  BUDGET // اشتراط مالي
+  SUBMISSION // اكتمال الطلب
+}
+
+// قواعد آلية معروفة؛ MANUAL يعني يحتاج قرار المستخدم
+enum RequirementRule {
+  MANUAL
+  ENTITY_TYPE
+  REGION
+  TARGET_GROUP
+  DOCUMENT_PRESENT
+  BUDGET_CAP
+  DURATION_MAX
+  COFUNDING_MIN
+  EXCLUDED_COSTS
+}
+
+model Requirement {
+  id            String                  @id @default(cuid())
+  opportunityId String
+  opportunity   FundingOpportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  code          String
+  category      RequirementCategory
+  text          String
+  mandatory     Boolean                 @default(true)
+  rule          RequirementRule         @default(MANUAL)
+  ruleParams    Json?
+  sourceDocId   String?
+  sourceLocator String?
+  sourceExcerpt String?
+  sortOrder     Int                     @default(0)
+  assessments   RequirementAssessment[]
+}
+
+enum AssessmentResult {
+  MET // مستوفى
+  NOT_MET // غير مستوفى
+  NEEDS_VERIFICATION // يحتاج تحققًا
+}
+
+model RequirementAssessment {
+  id            String           @id @default(cuid())
+  applicationId String
+  application   Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  requirementId String
+  requirement   Requirement      @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  result        AssessmentResult
+  evidence      String?
+  evidenceDocId String?
+  nextAction    String?
+  decidedBy     String // RULE | USER
+  decidedById   String?
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([applicationId, requirementId])
+}
+
+enum ApplicationStage {
+  OPPORTUNITY
+  EXTRACTION_REVIEW
+  ELIGIBILITY
+  IDEA
+  PROJECT
+  BUDGET
+  ANSWERS
+  READINESS
+  EXPORT
+}
+
+model Application {
+  id                  String                  @id @default(cuid())
+  organizationId      String
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  opportunityId       String
+  opportunity         FundingOpportunity      @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  title               String
+  stage               ApplicationStage        @default(OPPORTUNITY)
+  // رقم إصدار للتحكم بالتزامن (optimistic concurrency)
+  version             Int                     @default(1)
+  // المدخلات المؤثرة
+  beneficiaryCount    Int?
+  durationMonths      Int?
+  region              String?
+  ideaSummary         String?
+  // مدخلات منظمة لتطوير الفكرة (المشكلة، الدليل، المستفيدون...)
+  ideaInputs          Json?
+  ideaApproved        Boolean                 @default(false)
+  // نسخة ملف الجمعية وبيانات المنحة المستخدمة في الطلب
+  profileSnapshot     Json?
+  opportunitySnapshot Json?
+  // يُلغى عند تغيّر مدخلات مؤثرة
+  readinessValid      Boolean                 @default(false)
+  aiActionsUsed       Int                     @default(0)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  sections            ProjectSection[]
+  activities          Activity[]
+  indicators          Indicator[]
+  budgetLines         BudgetLine[]
+  partners            Partner[]
+  answers             FormAnswer[]
+  conversations       Conversation[]
+  revisions           Revision[]
+  readinessChecks     ReadinessCheck[]
+  exports             Export[]
+  reviewRequests      ReviewRequest[]
+  assessments         RequirementAssessment[]
+  changeProposals     ChangeProposal[]
+  orders              Order[]
+}
+
+enum SectionStatus {
+  EMPTY
+  DRAFT
+  APPROVED
+  NEEDS_REVIEW
+}
+
+model ProjectSection {
+  id            String        @id @default(cuid())
+  applicationId String
+  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  key           String
+  content       String        @default("")
+  status        SectionStatus @default(EMPTY)
+  origin        SourceType    @default(USER)
+  isEstimate    Boolean       @default(false)
+  reviewReason  String?
+  version       Int           @default(1)
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([applicationId, key])
+}
+
+model Activity {
+  id            String       @id @default(cuid())
+  applicationId String
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  code          String
+  name          String
+  description   String       @default("")
+  startMonth    Int
+  endMonth      Int
+  responsible   String       @default("")
+  outputs       String       @default("")
+  sortOrder     Int          @default(0)
+  indicators    Indicator[]
+  budgetLines   BudgetLine[]
+}
+
+enum IndicatorType {
+  OUTPUT
+  OUTCOME
+}
+
+model Indicator {
+  id            String        @id @default(cuid())
+  applicationId String
+  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  activityId    String?
+  activity      Activity?     @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  name          String
+  type          IndicatorType
+  baseline      String?
+  target        String
+  unit          String        @default("")
+  method        String        @default("")
+  isEstimate    Boolean       @default(false)
+  needsReview   Boolean       @default(false)
+  sortOrder     Int           @default(0)
+}
+
+enum CostCalc {
+  ONE_TIME // الكمية × تكلفة الوحدة
+  RECURRING // الكمية × تكلفة الوحدة × عدد الفترات
+}
+
+enum FundingSource {
+  DONOR
+  SELF
+  PARTNER
+}
+
+enum ContributionType {
+  CASH
+  IN_KIND
+}
+
+model BudgetLine {
+  id                           String           @id @default(cuid())
+  applicationId                String
+  application                  Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  activityId                   String?
+  activity                     Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  partnerId                    String?
+  partner                      Partner?         @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  item                         String
+  costCenter                   String           @default("")
+  unit                         String           @default("")
+  // الكمية بالألف (3 خانات عشرية) — 2.5 = 2500
+  quantityMilli                BigInt
+  unitCostHalalas              BigInt
+  calc                         CostCalc         @default(ONE_TIME)
+  periods                      Int              @default(1)
+  // حسابات مباشرة تُعاد فورًا عند تغيير المدخلات المؤثرة
+  periodsFollowDuration        Boolean          @default(false)
+  quantityFollowsBeneficiaries Boolean          @default(false)
+  fundingSource                FundingSource    @default(DONOR)
+  contributionType             ContributionType @default(CASH)
+  justification                String           @default("")
+  isEstimate                   Boolean          @default(false)
+  needsReview                  Boolean          @default(false)
+  sortOrder                    Int              @default(0)
+}
+
+enum PartnerStatus {
+  PROPOSED
+  NEGOTIATING
+  CONFIRMED
+}
+
+model Partner {
+  id                String        @id @default(cuid())
+  applicationId     String
+  application       Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name              String
+  partnerType       String        @default("")
+  role              String        @default("")
+  status            PartnerStatus @default(PROPOSED)
+  tasks             String        @default("")
+  cashHalalas       BigInt        @default(0)
+  inKindDescription String        @default("")
+  responsibilities  String        @default("")
+  mutualValue       String        @default("")
+  evidenceDocId     String?
+  orgApproved       Boolean       @default(false)
+  budgetLines       BudgetLine[]
+}
+
+enum QuestionType {
+  TEXT
+  NUMBER
+  CHOICE
+  ATTACHMENT
+}
+
+enum LimitType {
+  NONE
+  WORDS
+  CHARS
+}
+
+model FormQuestion {
+  id             String             @id @default(cuid())
+  opportunityId  String
+  opportunity    FundingOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  sortOrder      Int
+  text           String
+  type           QuestionType       @default(TEXT)
+  mandatory      Boolean            @default(true)
+  limitType      LimitType          @default(NONE)
+  limitValue     Int?
+  // أقسام المشروع التي تُبنى عليها الإجابة
+  linkedSections String[]           @default([])
+  sourceDocId    String?
+  sourceLocator  String?
+  answers        FormAnswer[]
+}
+
+enum AnswerStatus {
+  EMPTY
+  DRAFT
+  APPROVED
+  STALE
+}
+
+model FormAnswer {
+  id            String       @id @default(cuid())
+  applicationId String
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      FormQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  content       String       @default("")
+  status        AnswerStatus @default(EMPTY)
+  origin        SourceType   @default(USER)
+  staleReason   String?
+  version       Int          @default(1)
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([applicationId, questionId])
+}
+
+model Conversation {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  purpose       String      @default("IDEA")
+  createdAt     DateTime    @default(now())
+  messages      Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // user | assistant
+  content        String
+  structured     Json?
+  createdAt      DateTime     @default(now())
+}
+
+model Revision {
+  id              String          @id @default(cuid())
+  applicationId   String
+  application     Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  number          Int
+  label           String
+  reason          String // AUTO_BEFORE_CHANGE | MANUAL | APPROVAL | RESTORE
+  snapshot        Json
+  contentHash     String
+  isApproved      Boolean         @default(false)
+  readyAtApproval Boolean         @default(false)
+  createdById     String
+  createdAt       DateTime        @default(now())
+  exports         Export[]
+  reviewRequests  ReviewRequest[]
+
+  @@unique([applicationId, number])
+}
+
+model ReadinessCheck {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  ready         Boolean
+  completionPct Int
+  result        Json
+  createdAt     DateTime    @default(now())
+}
+
+model ChangeProposal {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  trigger       String
+  targetType    String // SECTION | ANSWER | INDICATOR | ACTIVITY
+  targetId      String
+  before        String
+  after         String
+  explanation   String
+  status        String      @default("PENDING") // PENDING | APPLIED | REJECTED
+  createdAt     DateTime    @default(now())
+}
+
+enum ExportFormat {
+  PDF
+  DOCX
+  XLSX
+  ANSWERS_TXT
+  CHECKLIST_PDF
+  SUMMARY_PDF
+  ZIP
+}
+
+model Export {
+  id            String       @id @default(cuid())
+  applicationId String
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  revisionId    String
+  revision      Revision     @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  format        ExportFormat
+  storageKey    String       @unique
+  filename      String
+  isDraft       Boolean
+  createdById   String
+  createdAt     DateTime     @default(now())
+}
+
+enum ReviewStatus {
+  NEW
+  IN_REVIEW
+  NEEDS_INFO
+  COMPLETED
+}
+
+model ReviewRequest {
+  id            String          @id @default(cuid())
+  applicationId String
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  revisionId    String
+  revision      Revision        @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  status        ReviewStatus    @default(NEW)
+  consentAt     DateTime
+  consentById   String
+  sharedDocIds  String[]        @default([])
+  notes         String          @default("")
+  expertUserId  String?
+  orderId       String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  comments      ReviewComment[]
+}
+
+model ReviewComment {
+  id              String        @id @default(cuid())
+  reviewRequestId String
+  reviewRequest   ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
+  sectionKey      String
+  authorId        String
+  authorRole      String // EXPERT | ORG
+  body            String
+  createdAt       DateTime      @default(now())
+}
+
+enum OrderProduct {
+  APPLICATION_PACKAGE
+  EXPERT_REVIEW
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+model Order {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicationId   String
+  application     Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  product         OrderProduct
+  amountHalalas   BigInt
+  currency        String       @default("SAR")
+  status          OrderStatus  @default(PENDING)
+  pricingSnapshot Json
+  createdById     String
+  createdAt       DateTime     @default(now())
+  paidAt          DateTime?
+  payments        Payment[]
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider      String // SIMULATED | ...
+  providerRef   String   @unique // منع المعالجة المكررة
+  amountHalalas BigInt
+  currency      String
+  status        String // SUCCEEDED | FAILED
+  isSimulated   Boolean
+  createdAt     DateTime @default(now())
+}
+
+enum AIJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model AIJob {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicationId  String?
+  task           String
+  provider       String
+  model          String
+  status         AIJobStatus  @default(PENDING)
+  attempts       Int          @default(0)
+  inputHash      String
+  inputTokens    Int?
+  outputTokens   Int?
+  error          String?
+  result         Json?
+  createdAt      DateTime     @default(now())
+  finishedAt     DateTime?
+
+  @@index([organizationId, task, inputHash])
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  action         String
+  targetType     String?
+  targetId       String?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+}

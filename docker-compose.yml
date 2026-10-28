@@ -1,0 +1,14 @@
+# قاعدة بيانات التطوير المحلية
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: qaddimha
+      POSTGRES_PASSWORD: qaddimha_dev
+      POSTGRES_DB: qaddimha
+    ports:
+      - "5432:5432"
+    volumes:
+      - qaddimha_pg:/var/lib/postgresql/data
+volumes:
+  qaddimha_pg:
