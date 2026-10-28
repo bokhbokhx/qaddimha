@@ -38,6 +38,8 @@ export function AutosaveText({
       if (raw) {
         const d = JSON.parse(raw) as { value: string; base: string };
         if (d.value !== initial && d.base === initial) {
+          // مزامنة مع نظام خارجي (التخزين المحلي) بعد التحميل؛ القراءة أثناء العرض تسبب عدم تطابق مع الخادم
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setValue(d.value);
           latest.current = d.value;
           setState("dirty");

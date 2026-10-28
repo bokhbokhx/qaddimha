@@ -104,8 +104,11 @@ export function summarizeBudget(
     const inKind = l.contributionType === "IN_KIND" && l.fundingSource !== "DONOR";
     if (inKind) s.inKindTotal += t; else s.cashTotal += t;
     if (l.fundingSource === "DONOR") s.donor += t;
-    else if (l.fundingSource === "SELF") inKind ? (s.selfInKind += t) : (s.selfCash += t);
-    else inKind ? (s.partnerInKind += t) : (s.partnerCash += t);
+    else if (l.fundingSource === "SELF") {
+      if (inKind) s.selfInKind += t;
+      else s.selfCash += t;
+    } else if (inKind) s.partnerInKind += t;
+    else s.partnerCash += t;
   }
   const cashGap = partnerCashGap(s.partnerCash, opts.confirmedPartnerCash ?? 0n);
   const nonDonor = s.total - s.donor;

@@ -47,3 +47,5 @@ next-env.d.ts
 /playwright-report
 next-env.d.ts
 !.env.example
+/storage-test
+tsconfig.tsbuildinfo

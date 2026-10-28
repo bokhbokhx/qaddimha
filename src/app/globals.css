@@ -67,3 +67,10 @@ dialog::backdrop {
     display: none !important;
   }
 }
+
+/* الشبكات بلا أعمدة صريحة تأخذ عمودًا لا يتجاوز عرض الحاوية (يمنع تمدد الصفحة على الجوال بسبب الجداول العريضة) */
+@layer base {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

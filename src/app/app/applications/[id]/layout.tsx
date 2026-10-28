@@ -64,7 +64,7 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps<
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <WorkspaceNav id={id} items={[...STAGES.map((s) => ({ path: s.path, label: s.label })), { path: "changes", label: `مقترحات التعديل${proposals ? ` (${proposals})` : ""}` }, { path: "revisions", label: "سجل الإصدارات" }, { path: "purchase", label: "الشراء" }, { path: "review", label: "مراجعة خبير" }]} />
           <Card className="p-4">
             <h2 className="mb-2 text-sm font-bold text-brand-900">ملخص المشروع</h2>

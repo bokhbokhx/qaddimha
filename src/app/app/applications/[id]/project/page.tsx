@@ -63,7 +63,7 @@ export default async function ProjectPage(props: PageProps<"/app/applications/[i
           {ctx.canEdit && <ActivityForm save={act.saveActivityAction.bind(null, id)} label="+ نشاط" />}
         </div>
         {!activities.length ? <EmptyState title="لا توجد أنشطة" /> : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead><tr className="border-b border-line text-right text-muted"><th className="py-2">الرمز</th><th>النشاط</th><th>الأشهر</th><th>المسؤول</th><th>المخرجات</th><th><span className="sr-only">إجراءات</span></th></tr></thead>
               <tbody>
@@ -87,7 +87,7 @@ export default async function ProjectPage(props: PageProps<"/app/applications/[i
           </div>
         )}
         {dur && activities.length > 0 && (
-          <div className="mt-4 overflow-x-auto" aria-label="مخطط زمني">
+          <div className="relative mt-4 overflow-x-auto" aria-label="مخطط زمني">
             <div className="min-w-[560px] space-y-1">
               {activities.map((a) => (
                 <div key={a.id} className="flex items-center gap-2 text-xs">

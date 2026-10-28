@@ -6,7 +6,7 @@ export function WorkspaceNav({ id, items }: { id: string; items: { path: string;
   const pathname = usePathname();
   const base = `/app/applications/${id}`;
   return (
-    <nav aria-label="أقسام الطلب" className="rounded-2xl border border-line bg-white p-2">
+    <nav aria-label="أقسام الطلب" className="min-w-0 rounded-2xl border border-line bg-white p-2">
       <ul className="flex gap-1 overflow-x-auto lg:flex-col">
         <li>
           <Link href={base} aria-current={pathname === base ? "page" : undefined} className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm ${pathname === base ? "bg-brand-900 text-white" : "hover:bg-brand-50"}`}>

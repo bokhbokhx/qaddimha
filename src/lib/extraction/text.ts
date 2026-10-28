@@ -6,12 +6,11 @@ import path from "node:path";
 import mammoth from "mammoth";
 import ExcelJS from "exceljs";
 import { FILE_LIMITS, type DetectedType } from "./files";
+import { chunkPages, type Chunk } from "./chunk";
+import { fixPopplerArabic, fixVisualArabic } from "./arabic";
 
-export interface Chunk {
-  index: number;
-  locator: string;
-  text: string;
-}
+export type { Chunk };
+
 
 export class ExtractionError extends Error {
   constructor(public code: "SCANNED_PDF" | "TOO_MANY_PAGES" | "EMPTY" | "UNSUPPORTED" | "TIMEOUT" | "CORRUPT", message: string) {
@@ -34,34 +33,6 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
     const t = setTimeout(() => reject(new ExtractionError("TIMEOUT", EXTRACTION_HELP.TIMEOUT)), ms);
     p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
   });
-}
-
-/** يقسم نص صفحة/قسم إلى فقرات ثم مقاطع بحجم محدود مع مرجع دقيق */
-export function chunkPages(pages: { label: string; text: string }[]): Chunk[] {
-  const chunks: Chunk[] = [];
-  for (const page of pages) {
-    const paras = page.text.split(/\n\s*\n|\r?\n/).map((p) => p.replace(/[ \t]+/g, " ").trim()).filter(Boolean);
-    let buf: string[] = [];
-    let start = 1;
-    const flush = (end: number) => {
-      if (!buf.length) return;
-      const range = start === end ? `فقرة ${start}` : `الفقرات ${start}–${end}`;
-      chunks.push({ index: chunks.length, locator: `${page.label}، ${range}`, text: buf.join("\n") });
-      buf = [];
-    };
-    paras.forEach((p, i) => {
-      const n = i + 1;
-      const size = buf.reduce((a, b) => a + b.length, 0);
-      if (buf.length && size + p.length > FILE_LIMITS.maxChunkChars) {
-        flush(n - 1);
-        start = n;
-      }
-      if (!buf.length) start = n;
-      buf.push(p.slice(0, FILE_LIMITS.maxChunkChars * 2));
-    });
-    flush(paras.length);
-  }
-  return chunks;
 }
 
 export async function extractText(buf: Buffer, type: DetectedType): Promise<{ chunks: Chunk[]; pageCount: number | null }> {
@@ -126,22 +97,6 @@ function cellText(v: unknown): string {
   return String(v).trim();
 }
 
-const PRESENTATION_FORMS = /[\uFB50-\uFDFF\uFE70-\uFEFF]/;
-const LTR_RUN = /[0-9A-Za-z@._%+\-\/:,]+(?:\s+[0-9A-Za-z@._%+\-\/:,]+)*/g;
-
-/**
- * بعض ملفات PDF تخزن العربية بأشكال العرض وبترتيب بصري معكوس.
- * نعكس السطر، ثم نطبّع الأشكال (NFKC) فتعود الحروف وأزواج اللام ألف لترتيبها المنطقي،
- * ثم نعيد عكس المقاطع اللاتينية والأرقام ونقلب الأقواس.
- */
-export function fixVisualArabic(line: string): string {
-  if (!PRESENTATION_FORMS.test(line)) return line;
-  const reversed = Array.from(line).reverse().join("").normalize("NFKC");
-  return reversed
-    .replace(LTR_RUN, (m) => Array.from(m).reverse().join(""))
-    .replace(/[()[\]{}]/g, (c) => ({ "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{" })[c]!);
-}
-
 /**
  * استخراج PDF عبر pdftotext (Poppler) إن توفر على الخادم — أدق ترتيبًا للعربية.
  * يعيد null إن لم يتوفر، فنستخدم pdf.js مع معالجة الترتيب البصري.
@@ -166,10 +121,3 @@ async function pdftotextPages(buf: Buffer): Promise<string[] | null> {
   }
 }
 
-/** إزالة علامات الاتجاه، وتصحيح انعكاس «لا/لأ/لإ/لآ» بعد أداة التعريف الذي ينتج عن بعض الخطوط */
-export function fixPopplerArabic(t: string): string {
-  return t
-    .replace(/[\u202A-\u202E\u200E\u200F\u2066-\u2069]/g, "")
-    .replace(/ا([أإآا])ل/g, "ال$1")
-    .replace(/[ \t]{2,}/g, " ");
-}

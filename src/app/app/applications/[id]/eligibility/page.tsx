@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { appPageContext } from "@/lib/page-context";
 import { buildSnapshot } from "@/lib/services/snapshot";
-import { CATEGORY_LABEL } from "@/lib/catalog";
 import { USER_DECIDABLE_RULES } from "@/lib/domain/requirements";
 import { Card, EmptyState, LinkButton, Notice, PageHeader } from "@/components/ui";
 import { AssessmentBadge } from "@/components/status";

@@ -72,7 +72,7 @@ export default async function BudgetPage(props: PageProps<"/app/applications/[id
         <EmptyState title="الميزانية فارغة">أضف البنود يدويًا، أو اطلب اقتراحًا تقديريًا مرتبطًا بالأنشطة يحتاج اعتمادك.</EmptyState>
       ) : (
         <Card className="p-0">
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[960px] text-sm">
               <caption className="sr-only">بنود الميزانية</caption>
               <thead className="bg-brand-900 text-white">

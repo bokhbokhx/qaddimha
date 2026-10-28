@@ -3,10 +3,9 @@ import ExcelJS from "exceljs";
 import { halalasToNumberString } from "@/lib/money";
 import { DEMO_EXPORT_NOTICE, metaLine, type ExportMeta, type ExportModel } from "./common";
 
-/** منع حقن الصيغ في الخلايا النصية (CSV/Excel formula injection) */
-export function safeText(v: string): string {
-  return /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-}
+import { safeText } from "./xlsx-safe";
+
+export { safeText };
 
 export async function budgetXlsx(x: ExportModel, m: ExportMeta): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
@@ -50,23 +49,26 @@ export async function budgetXlsx(x: ExportModel, m: ExportMeta): Promise<Buffer>
   const last = first + Math.max(0, x.budgetRows.length - 1);
   const sr = last + 2;
   const range = (col: string) => `${col}${first}:${col}${last}`;
-  const sums: [string, string, string][] = [
-    ["إجمالي المشروع", `SUM(${range("I")})`, x.budget[0][1]],
-    ["المطلوب من المانح", `SUMIFS(${range("I")},${range("J")},"المانح")`, x.budget[1][1]],
-    ["المساهمة الذاتية النقدية", `SUMIFS(${range("I")},${range("J")},"الجمعية",${range("K")},"نقدي")`, x.budget[2][1]],
-    ["المساهمة الذاتية العينية", `SUMIFS(${range("I")},${range("J")},"الجمعية",${range("K")},"عيني")`, x.budget[3][1]],
-    ["مساهمات الشركاء النقدية", `SUMIFS(${range("I")},${range("J")},"شريك",${range("K")},"نقدي")`, x.budget[4][1]],
-    ["مساهمات الشركاء العينية", `SUMIFS(${range("I")},${range("J")},"شريك",${range("K")},"عيني")`, x.budget[5][1]],
+  // القيم المخزنة مسبقًا تُحسب بالهللة من نفس البنود، والصيغ تعيد حسابها في Excel
+  const sumOf = (pred: (l: (typeof x.budgetRows)[number]) => boolean) =>
+    Number(halalasToNumberString(x.budgetRows.filter(pred).reduce((a, l) => a + BigInt(l.totalHalalas), 0n)));
+  const sums: [string, string, number][] = [
+    ["إجمالي المشروع", `SUM(${range("I")})`, sumOf(() => true)],
+    ["المطلوب من المانح", `SUMIFS(${range("I")},${range("J")},"المانح")`, sumOf((l) => l.fundingSource === "DONOR")],
+    ["المساهمة الذاتية النقدية", `SUMIFS(${range("I")},${range("J")},"الجمعية",${range("K")},"نقدي")`, sumOf((l) => l.fundingSource === "SELF" && l.contributionType === "CASH")],
+    ["المساهمة الذاتية العينية", `SUMIFS(${range("I")},${range("J")},"الجمعية",${range("K")},"عيني")`, sumOf((l) => l.fundingSource === "SELF" && l.contributionType === "IN_KIND")],
+    ["مساهمات الشركاء النقدية", `SUMIFS(${range("I")},${range("J")},"شريك",${range("K")},"نقدي")`, sumOf((l) => l.fundingSource === "PARTNER" && l.contributionType === "CASH")],
+    ["مساهمات الشركاء العينية", `SUMIFS(${range("I")},${range("J")},"شريك",${range("K")},"عيني")`, sumOf((l) => l.fundingSource === "PARTNER" && l.contributionType === "IN_KIND")],
   ];
-  sums.forEach(([label, formula, display], i) => {
+  sums.forEach(([label, formula, result], i) => {
     const r = ws.getRow(sr + i);
     r.getCell(8).value = label;
     r.getCell(8).font = { bold: true };
-    const num = Number(display.replace(/[^\d.-]/g, ""));
-    r.getCell(9).value = x.budgetRows.length ? { formula, result: num } : 0;
+    r.getCell(9).value = x.budgetRows.length ? { formula, result } : 0;
     r.getCell(9).numFmt = "#,##0.00";
     r.getCell(9).font = { bold: true };
   });
+  ws.pageSetup = { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
   ws.columns.forEach((c, i) => (c.width = [28, 16, 10, 10, 10, 16, 12, 11, 16, 13, 12, 18, 40][i] ?? 12));
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

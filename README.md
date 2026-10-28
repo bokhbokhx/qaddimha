@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# قدمها — Qaddimha
 
-## Getting Started
+منصة عربية تساعد الجمعيات والمؤسسات غير الربحية في السعودية على تجهيز طلب دعم متكامل لمنحة محددة:
+«من بيانات جمعيتك إلى طلب دعم متكامل، خطوة بخطوة».
 
-First, run the development server:
+> هذه نسخة أولى عملية تعمل من البداية للنهاية. الأسعار والجمعية والمنحة المضمّنة **تجريبية وغير حقيقية**.
+> للتفاصيل: [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) و[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md).
+
+## التقنيات
+
+- Next.js 16 (App Router، Turbopack) + React 19 + TypeScript
+- Tailwind CSS 4، خط IBM Plex Sans Arabic محلي (بلا اعتماد على الشبكة)
+- PostgreSQL 16 + Prisma 6، والتحقق بـ Zod 4
+- جلسات خادمية (رمز عشوائي في كعكة HttpOnly، وتجزئته فقط في قاعدة البيانات) + bcrypt
+- Anthropic SDK لمزود الذكاء الاصطناعي الحقيقي، ووضع تجريبي ببيانات معدّة مسبقًا
+- التصدير: Chromium (playwright-core) لملفات PDF العربية، و`docx` لملفات DOCX، و`exceljs` لملفات XLSX، و`jszip`
+- الاختبارات: Vitest (وحدات وتكامل مع قاعدة بيانات) وPlaywright (مسار كامل)
+
+## التشغيل المحلي
+
+المتطلبات: Node.js 20.9 أو أحدث، وPostgreSQL 16، وChromium لتوليد PDF (يأتي مع Playwright).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd qaddimha
+npm install
+cp .env.example .env                # عدّل DATABASE_URL إن لزم
+
+docker compose up -d db             # أو استخدم PostgreSQL محليًا
+npm run db:migrate                  # تطبيق المهاجرات
+npm run db:seed                     # بيانات تجريبية (ترفض العمل إذا كان APP_ENV=production)
+
+npm run dev                         # http://localhost:3000
+# أو للإنتاج المحلي:
+npm run build && npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+إذا لم يتوفر متصفح Playwright: `npx playwright install chromium`، أو حدّد `CHROMIUM_PATH`.
+استخراج النص من PDF يستخدم `pdftotext` (حزمة Poppler) إن وُجد على الخادم لأنه أدق في ترتيب العربية، وإلا فيستخدم pdf.js مع معالجة للترتيب.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### حسابات التطوير التجريبية
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+كلمة المرور لجميع الحسابات: `Demo#Qaddimha2026` (تُنشأ عبر `db:seed` فقط، ولا تُنشأ في الإنتاج).
 
-## Learn More
+| الحساب | الدور |
+|---|---|
+| `owner@demo.qaddimha.test` | مالك «جمعية أثر للتنمية المجتمعية» التجريبية |
+| `viewer@demo.qaddimha.test` | قارئ في الجمعية نفسها |
+| `other@demo.qaddimha.test` | مالك جمعية أخرى (لاختبار العزل) |
+| `expert@demo.qaddimha.test` | خبير مراجعة |
+| `admin@demo.qaddimha.test` | مشغّل المنصة (إسناد المراجعات) |
 
-To learn more about Next.js, take a look at the following resources:
+### جولة سريعة
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. ادخل بحساب المالك ← «ملف الجمعية»: أكّد المعلومات المستخرجة، وأضف ملفّي المثال (القوائم المالية وخطاب التعهد).
+2. «ابدأ طلبًا جديدًا» ← «المنحة التجريبية»: يُرفع الدليل التجريبي ويُحلَّل عبر نفس مسار الرفع والاستخراج.
+3. «راجع ما استخرجناه» ← أكّد البيانات. (اختياري: أضف التعميم التجريبي لترى حالة تعارض وتحسمها.)
+4. حدّد المستفيدين والمدة والمنطقة في «ملخص المشروع» بالشريط الجانبي، ثم سجّل قرارك في الشروط اليدوية.
+5. «طوّر فكرة المشروع»: املأ الحقول المنظمة ← «اسأل المساعد» ← اختر المسار الأول ← اعتمد الملخص.
+6. «محرر المشروع»: أنشئ المسودة، أكمل موضع «يحتاج استكمال»، واعتمد الأقسام والمؤشرات.
+7. «راجع الميزانية»: اقترح بنودًا تقديرية، وعالج البند المستبعد (الضيافة الممولة من المانح)، واعتمد البنود.
+8. «إجابات نموذج الجهة»: أنشئ المسودات واعتمدها.
+9. جرّب تعديلًا مترابطًا: غيّر عدد المستفيدين وراجع «مقترحات التعديل» (قبل/بعد).
+10. «تحقق من جاهزية الطلب» ← اعتمد نسخة ← «الشراء» (محاكاة) ← «المعاينة والتصدير».
+11. «مراجعة خبير»: اشترِ الإضافة (محاكاة) وأرسل الطلب ← ادخل كمشغّل وأسنده ← ادخل كخبير وعلّق.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## متغيرات البيئة
 
-## Deploy on Vercel
+تُوضع في `qaddimha/.env` (لا تُرفع إلى git). القائمة الكاملة مع الشرح في [.env.example](./.env.example).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| المتغير | الغرض |
+|---|---|
+| `DATABASE_URL` | اتصال PostgreSQL |
+| `APP_ENV` | `development` أو `production` (الإنتاج يمنع الدفع المحاكى والبيانات التجريبية ويفعّل Secure للكعكات) |
+| `STORAGE_DIR` | مجلد التخزين الخاص للملفات (خارج `public`) |
+| `ANTHROPIC_API_KEY` | مفتاح المزود الحقيقي — على الخادم فقط. عند غيابه يعمل الوضع التجريبي |
+| `AI_MODEL` | معرف النموذج (إعداد وليس ثابتًا في الكود)؛ مطلوب عند تفعيل المزود |
+| `AI_PROVIDER` | `anthropic` أو `demo` (اختياري؛ يُستنتج من وجود المفتاح) |
+| `AI_TIMEOUT_MS`، `AI_MAX_RETRIES`، `AI_MAX_INPUT_CHARS`، `AI_MAX_OUTPUT_TOKENS` | حدود المهلة والمحاولات والحجم |
+| `PAYMENTS_MODE` | `simulated` (متاح خارج الإنتاج فقط) |
+| `PRICE_PACKAGE_HALALAS`، `PRICE_REVIEW_HALALAS` | أسعار تجريبية بالهللة |
+| `CHROMIUM_PATH` | مسار Chromium لتوليد PDF (اختياري) |
+| `LOGIN_RATE_LIMIT` | حد محاولات الدخول لكل 10 دقائق (افتراضي 10) |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## الأوامر
+
+| الأمر | الوصف |
+|---|---|
+| `npm run dev` / `build` / `start` | التطوير والبناء والتشغيل |
+| `npm run typecheck` | فحص الأنواع |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest: تُنشأ قاعدة `qaddimha_test` من الصفر في كل تشغيل (يتطلب صلاحية CREATEDB) |
+| `./scripts/e2e-db.sh` ثم `npm run test:e2e` | Playwright: المسار الكامل على قاعدة `qaddimha_e2e` مستقلة |
+| `npm run db:migrate` / `db:seed` / `db:reset` | قاعدة البيانات |
+| `npm run samples` | إعادة توليد ملفات المثال (يغير بصماتها؛ لا حاجة لذلك عادة) |
+
+لتشغيل الاختبار الشامل على خادم إنتاج محلي:
+
+```bash
+npm run build
+./scripts/e2e-db.sh
+LOGIN_RATE_LIMIT=1000 DATABASE_URL=postgresql://qaddimha:qaddimha_dev@localhost:5432/qaddimha_e2e \
+  STORAGE_DIR=./storage-e2e npm run start -- -p 3100 &
+E2E_BASE_URL=http://localhost:3100 npm run test:e2e
+```
+
+## الوظائف الفعلية والوظائف التجريبية
+
+| الوظيفة | الحالة |
+|---|---|
+| الحسابات والجلسات والأدوار وعزل الجمعيات | فعلية |
+| رفع الملفات والتحقق من نوعها وحجمها واستخراج نصها (PDF نصي، DOCX، TXT، XLSX) | فعلية |
+| تحليل الملفات واستخراج البيانات بالذكاء الاصطناعي | فعلية مع `ANTHROPIC_API_KEY` و`AI_MODEL`؛ في الوضع التجريبي تعمل فقط مع ملفات المثال المعروفة (تُطابق ببصمة SHA-256) |
+| حوار الفكرة وإعداد الأقسام واقتراح الميزانية والإجابات | فعلية مع المزود؛ في الوضع التجريبي بيانات معدّة للمنحة التجريبية فقط، وأسئلة استكمال قائمة على قواعد |
+| تقييم الشروط وفحص الجاهزية وتحليل الأثر والحسابات المالية | فعلية (برمجية حتمية، لا تعتمد على النموذج) |
+| النسخ والمقارنة والاستعادة والاعتماد | فعلية |
+| التصدير PDF/DOCX/XLSX/TXT/ZIP | فعلي |
+| الدفع | **محاكاة فقط** — «لا يتم تحصيل مبلغ». لا يوجد مزود دفع حقيقي؛ نقطة webhook تعيد 501 |
+| مراجعة الخبير | فعلية كمسار عمل، تُشغَّل يدويًا (إسناد عبر صفحة المشغّل)، بلا إشعارات بريدية |
+
+## القيود المعروفة
+
+- لا توجد قراءة ضوئية (OCR): ملفات PDF الممسوحة تُكتشف ويُشرح للمستخدم البديل.
+- الرابط المرجعي للمنحة يُحفظ مرجعًا فقط ولا يُقرأ محتواه (تجنبًا لمخاطر SSRF).
+- محدودية الطلبات في الذاكرة (لكل عملية خادم)؛ تحتاج مخزنًا مشتركًا عند التشغيل بعدة نسخ.
+- التخزين محلي؛ واجهة `Storage` جاهزة للاستبدال بتخزين سحابي خاص.
+- خط DOCX مُسمّى (IBM Plex Sans Arabic) وليس مضمّنًا؛ يستبدله Word بخط عربي متاح إن لم يكن مثبتًا.
+- عدّ الكلمات والأحرف معلن الطريقة وقد يختلف عن بوابة الجهة.
+- `npm audit` يبلّغ عن ثغرات في اعتماديات فرعية (`uuid` عبر `exceljs`، و`deepmerge-ts` عبر Prisma) لا يُستخدم مسارها المتأثر هنا؛ إصلاحها يتطلب ترقيات كاسرة تُراجع لاحقًا.
+- رمز حالة HTTP لصفحات الطلبات غير المصرح بها قد يكون 200 بسبب البث، لكن المحتوى لا يُعرض (صفحة «غير موجود»)؛ واجهات التنزيل تعيد 404.
+
+## قبل الاستخدام الإنتاجي
+
+1. مراجعة قانونية لسياسة الخصوصية وشروط الاستخدام (حاليًا مسودتان)، واعتماد التسعير الفعلي.
+2. مزود دفع حقيقي مع تحقق webhook والتوقيع والمبلغ والعملة ومنع التكرار (الدالة `processPaymentEvent` جاهزة لذلك).
+3. تخزين ملفات خاص مُدار ونسخ احتياطي لقاعدة البيانات، وسياسة احتفاظ وحذف موثقة.
+4. محدودية طلبات بمخزن مشترك، ومراقبة وسجلات مركزية، ورؤوس CSP.
+5. إدارة أعضاء الجمعية (دعوة محرر/قارئ) وإعادة تعيين كلمة المرور والتحقق من البريد.
+6. مراجعة اتفاقية مزود الذكاء الاصطناعي بشأن الاحتفاظ بالبيانات قبل إرسال مستندات حقيقية، واختبار جودة الاستخراج على مستندات فعلية.
+7. OCR اختياري، وإشعارات لمراجعات الخبراء.

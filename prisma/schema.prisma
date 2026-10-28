@@ -45,14 +45,6 @@ model Session {
   @@index([userId])
 }
 
-model LoginAttempt {
-  id        String   @id @default(cuid())
-  key       String // بريد أو عنوان — للحد من المحاولات
-  createdAt DateTime @default(now())
-
-  @@index([key, createdAt])
-}
-
 model Organization {
   id            String               @id @default(cuid())
   displayName   String

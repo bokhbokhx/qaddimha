@@ -30,7 +30,7 @@ export default async function RevisionsPage(props: PageProps<"/app/applications/
       <PageHeader title="سجل الإصدارات والمقارنة" description="تُحفظ نسخة تلقائيًا قبل كل تغيير مؤثر، ويمكنك حفظ نسخة يدوية أو استعادة أي نسخة (مع حفظ الحالة الحالية أولًا)." actions={ctx.canEdit && <SaveRevision save={saveRevisionAction.bind(null, id)} />} />
       {!revs.length ? <EmptyState title="لا توجد نسخ بعد" /> : (
         <Card className="p-0">
-          <form className="overflow-x-auto" action={`/app/applications/${id}/revisions`}>
+          <form className="relative overflow-x-auto" action={`/app/applications/${id}/revisions`}>
             <table className="w-full min-w-[720px] text-sm">
               <thead><tr className="border-b border-line text-right text-muted"><th className="p-2">أ</th><th className="p-2">ب</th><th className="p-2">رقم</th><th className="p-2">الاسم</th><th className="p-2">النوع</th><th className="p-2">التاريخ</th><th className="p-2">الحالة</th><th className="p-2"><span className="sr-only">إجراءات</span></th></tr></thead>
               <tbody>
