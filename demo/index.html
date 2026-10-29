@@ -151,6 +151,9 @@ textarea { resize: vertical; line-height: 1.9; }
 .quick button:hover { background: var(--brand-soft); }
 .expert { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .expert span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: .8rem; color: var(--muted); }
+.live-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--gold-soft); color: var(--warn); border-radius: 10px; padding: 6px 10px; font-size: .86rem; }
+.live-bar[hidden] { display: none; }
+.bubble.log { background: transparent; color: var(--ok); font-size: .78rem; padding: 0 4px; justify-self: start; }
 .suggest { display: flex; flex-wrap: wrap; gap: 6px; }
 .suggest button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 2px 10px; font-size: .78rem; cursor: pointer; color: var(--ink); text-align: start; }
 
@@ -236,6 +239,7 @@ footer { color: var(--muted); font-size: .8rem; padding-block: 0 32px; }
   <header><h2>مستشار المنح</h2><div class="row"><button type="button" class="btn ghost small" id="conv-toggle" aria-pressed="false">🎧 محادثة صوتية</button><button type="button" class="btn ghost small" id="tts-toggle" aria-pressed="false">🔈 قراءة الردود</button><button type="button" class="btn ghost small" id="close-drawer" aria-label="إغلاق">✕</button></div></header>
   <div class="convo" id="convo"></div>
   <div class="composer">
+    <div class="live-bar" id="live-bar" hidden><span id="live-status">…</span><button type="button" class="btn danger small" id="live-end">■ إنهاء المحادثة</button></div>
     <div class="suggest" id="suggest"></div>
     <div class="row">
       <button type="button" class="mic-sm" id="mic-sm" aria-label="تحدث"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
@@ -327,7 +331,7 @@ function load() { try { const s = JSON.parse(localStorage.getItem("qaddimha-demo
 const uid = () => "x" + (S.nextId++);
 
 // ---------- القدرات: ما الحقيقي وما المحاكى ----------
-const CAP = { ai: "checking", voice: "unknown", downloads: "checking", tts: "speechSynthesis" in window };
+const CAP = { live: "checking", aiVia: "", ai: "checking", voice: "unknown", downloads: "checking", tts: "speechSynthesis" in window };
 let sample = null, downloads = null;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (!SR) CAP.voice = "sim";
@@ -516,7 +520,8 @@ function renderSide() {
     <section class="panel">
       <h3>ما الحقيقي في هذا العرض</h3>
       <div class="status-list">
-        <div><span>المستشار الذكي (فهم، أسئلة، صياغة)</span>${CAP.ai === "real" ? chip("ok", "حقيقي عبر Claude") : CAP.ai === "checking" ? chip("neutral", "جارٍ التحقق") : chip("warn", "محاكاة بقواعد")}</div>
+        <div><span>المستشار الذكي (فهم، أسئلة، صياغة)</span>${CAP.ai === "real" ? chip("ok", CAP.aiVia === "proxy" ? "حقيقي — Claude عبر خادم الموقع" : "حقيقي عبر Claude") : CAP.ai === "checking" ? chip("neutral", "جارٍ التحقق") : chip("warn", "محاكاة بقواعد")}</div>
+        <div><span>محادثة صوتية حية (Gemini Live)</span>${CAP.live === "ready" ? chip("ok", "حقيقي") : CAP.live === "checking" ? chip("neutral", "جارٍ التحقق") : chip("warn", "في نسخة الموقع")}</div>
         <div><span>الاستماع للصوت</span>${CAP.voice === "real" ? chip("ok", "حقيقي (متصفحك)") : CAP.voice === "sim" ? chip("warn", "محاكاة") : chip("neutral", "يتحدد عند أول ضغطة")}</div>
         <div><span>قراءة الردود بصوت</span>${CAP.tts ? chip("ok", "حقيقي إن توفر صوت عربي") : chip("warn", "غير متاح")}</div>
         <div><span>قراءة ملفات TXT</span>${chip("ok", "حقيقي")}</div>
@@ -672,9 +677,9 @@ async function generateDraft(btn) {
   }
   S.greeted.project = true;
   go("project");
-  openDrawer(true);
+  if (!liveActive) openDrawer(true);
   addAI(`${note}جهزتُ المسودة ${source === "ai" ? "(كتبها Claude من مصادرك)" : "(معدّة للعرض)"}: وصف المشروع، المشكلة، الأهداف، ${S.activities.length} أنشطة، ${S.indicators.length} مؤشرات، ${S.lines.length} بنود ميزانية، وإجابات أسئلة المنحة.\nما يحتاجك فقط: ${S.draftMissing.join("، ") || "لا شيء"}.\nعدّل مباشرة، أو قل لي ما تريد بالصوت أو الكتابة.`);
-  askNext();
+  if (!liveActive) askNext();
 }
 
 function orgSummary() { return ORG_FIELDS.map(([k, l]) => S.org[k]?.value ? `- ${l}: ${S.org[k].value} [${PROV[S.org[k].prov]?.[1] || ""}]` : `- ${l}: غير معروف`).join("\n"); }
@@ -743,6 +748,7 @@ function askNext() {
   else addAI("لا أسئلة متبقية لدي. راجع صفحة «المراجعة والتصدير» لاعتماد النسخة.");
 }
 function startInterview() {
+  if (CAP.live === "ready") { startLiveSession(); return; }
   openDrawer(true);
   addAI("سأسألك أسئلة قصيرة، واحدًا تلو الآخر، بترتيب ما يهم المقيّمين أكثر، وأشرح لماذا أسأل. أجب بالصوت أو الكتابة أو اضغط إجابة مقترحة.");
   askNext();
@@ -764,7 +770,8 @@ function renderConvo() {
   const start = Math.max(0, S.chat.length - 40);
   c.innerHTML = S.chat.slice(start).map((m, k) => {
     const idx = start + k;
-    if (m.role === "me") return `<div class="bubble me"><span class="tag">${m.via === "voice" ? "بالصوت" : m.via === "sim" ? "بالصوت (محاكاة)" : "كتابة"}</span>${esc(m.text)}</div>`;
+    if (m.role === "log") return `<div class="bubble log">✓ ${esc(m.text)}</div>`;
+    if (m.role === "me") return `<div class="bubble me"><span class="tag">${m.via === "live" ? "بالصوت — مباشر" : m.via === "voice" ? "بالصوت" : m.via === "sim" ? "بالصوت (محاكاة)" : "كتابة"}</span>${esc(m.text)}</div>`;
     let html = `<div class="bubble ai">${m.extra?.q ? "❓ " : ""}${esc(m.text)}</div>`;
     if (m.extra?.q) html += `<div class="why">لماذا أسأل: ${esc(m.extra.q.why)}</div>` + (idx === S.chat.length - 1 && m.extra.q.quick?.length ? `<div class="quick">${m.extra.q.quick.map((s) => `<button type="button" data-say="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : "");
     if (m.extra?.actions?.length && !m.extra.done) {
@@ -794,7 +801,7 @@ function renderConvo() {
   $("#suggest").querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => handleInput(b.dataset.say, "text")));
 }
 function renderModeLine() {
-  $("#mode-line").textContent = `الصوت: ${CAP.voice === "real" ? "استماع حقيقي من متصفحك" : CAP.voice === "sim" ? "محاكاة — الميكروفون غير متاح هنا، يُشغَّل كلام مثال" : "يتحدد عند أول ضغطة"} · المستشار: ${CAP.ai === "real" ? "Claude — حقيقي" : CAP.ai === "checking" ? "جارٍ التحقق" : "قواعد محاكاة"}`;
+  $("#mode-line").textContent = `الصوت: ${CAP.live === "ready" ? "محادثة حية حقيقية (Gemini Live) — اضغط المايك" : CAP.voice === "real" ? "استماع حقيقي من متصفحك" : CAP.voice === "sim" ? "محاكاة — الميكروفون غير متاح هنا، يُشغَّل كلام مثال" : "يتحدد عند أول ضغطة"} · المستشار: ${CAP.ai === "real" ? "Claude — حقيقي" : CAP.ai === "checking" ? "جارٍ التحقق" : "قواعد محاكاة"}`;
 }
 
 const SIM_SCRIPT = {
@@ -822,7 +829,7 @@ function suggestionsFor(step) {
 
 function greetForStep() {
   const step = route();
-  if (S.greeted[step]) return;
+  if (S.greeted[step] || liveActive) return;
   S.greeted[step] = true;
   const miss = missingFor(step);
   const line = {
@@ -844,6 +851,7 @@ function missingFor(step) {
 
 // الاستماع: حقيقي إن سمح المتصفح، وإلا محاكاة بكلام مثال موسوم بوضوح
 function micPress() {
+  if (CAP.live === "ready") { liveActive || liveConnecting ? endLiveSession() : startLiveSession(); return; }
   if (busy) return;
   if (listening) { try { rec && rec.stop(); } catch {} return; }
   if (CAP.voice !== "sim" && SR) {
@@ -896,9 +904,266 @@ function speak(text, after) {
   } catch {}
 }
 
+// ---------- Claude عبر خادم الموقع (نفس /api/anthropic في براندي) ----------
+function proxySample() {
+  const call = async (prompt) => {
+    const r = await fetch("/api/anthropic", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ max_tokens: 4096, messages: [{ role: "user", content: prompt }] }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { code: r.status === 429 ? "rate_limited" : "unavailable", message: JSON.stringify(d.error || d) };
+    return (d.content || []).filter((c) => c.type === "text").map((c) => c.text).join("");
+  };
+  const f = async (prompt) => ({ text: await call(prompt), truncated: false });
+  f.json = async (prompt) => {
+    const t = await call(prompt + "\n\nأعد JSON صالحًا فقط، بلا أي نص قبله أو بعده.");
+    const m = t.match(/\{[\s\S]*\}/);
+    if (!m) throw { code: "shape" };
+    return JSON.parse(m[0]);
+  };
+  return f;
+}
+
+// ---------- المحادثة الصوتية الحية (Gemini Live) — نفس آلية براندي ----------
+let liveWs = null, liveAudioCtx = null, livePlaybackCtx = null, liveWorkletNode = null, liveMicStream = null;
+let livePlayCursor = 0, liveActive = false, liveConnecting = false, liveSendBuffer = [], liveSendBufferSamples = 0;
+
+const LIVE_STR = (d) => ({ type: "string", description: d });
+const LIVE_INT = (d) => ({ type: "integer", description: d });
+const LIVE_TOOLS = [{ functionDeclarations: [
+  { name: "get_status", description: "اقرأ حالة الطلب الآن: الأسئلة الناقصة مرتبة بأثرها مع سببها، الجاهزية، الميزانية، والشاشة الحالية. استدعها في البداية وبعد كل تقدم لتعرف السؤال التالي الصحيح.", parameters: { type: "object", properties: { focus: LIVE_STR("اختياري: ما تريد التركيز عليه") } } },
+  { name: "save_org", description: "حفظ معلومة عن الجمعية قالها المستخدم.", parameters: { type: "object", properties: { field: { type: "string", enum: ORG_FIELDS.map((f) => f[0]), description: ORG_FIELDS.map((f) => f[0] + "=" + f[1]).join("، ") }, value: LIVE_STR("القيمة بصياغة مهنية") }, required: ["field", "value"] } },
+  { name: "set_params", description: "تحديد عدد المستفيدين أو مدة المشروع بالأشهر أو منطقة التنفيذ. يعيد حساب الميزانية ويقترح تحديث النصوص المتأثرة.", parameters: { type: "object", properties: { beneficiaries: LIVE_INT("عدد المستفيدين"), duration: LIVE_INT("المدة بالأشهر"), region: { type: "string", enum: ["منطقة الرياض", "منطقة القصيم", "منطقة مكة المكرمة", "المنطقة الشرقية"] } } } },
+  { name: "set_idea", description: "حفظ فكرة المشروع الأولية كما وصفها المستخدم.", parameters: { type: "object", properties: { value: LIVE_STR("الفكرة") }, required: ["value"] } },
+  { name: "write_draft", description: "كتابة مسودة الطلب الكاملة (المشروع، الأنشطة، المؤشرات، الميزانية، إجابات النموذج) من المعلومات المحفوظة. استدعها فقط بعد موافقة المستخدم. تستغرق حتى دقيقة.", parameters: { type: "object", properties: { note: LIVE_STR("اختياري: توجيه إضافي للمسودة") } } },
+  { name: "set_section", description: "استبدال نص قسم من المشروع بصياغة جديدة كاملة.", parameters: { type: "object", properties: { key: { type: "string", enum: Object.keys(SECTION_LABEL), description: Object.entries(SECTION_LABEL).map(([k, l]) => k + "=" + l).join("، ") }, value: LIVE_STR("النص الكامل الجديد") }, required: ["key", "value"] } },
+  { name: "add_activity", description: "إضافة نشاط للمشروع.", parameters: { type: "object", properties: { name: LIVE_STR("اسم النشاط"), start: LIVE_INT("شهر البداية"), end: LIVE_INT("شهر النهاية"), outputs: LIVE_STR("المخرجات") }, required: ["name", "start", "end"] } },
+  { name: "remove_activity", description: "حذف نشاط بالاسم.", parameters: { type: "object", properties: { name: LIVE_STR("اسم النشاط") }, required: ["name"] } },
+  { name: "add_budget_line", description: "إضافة بند ميزانية. cost تكلفة الوحدة بالريال.", parameters: { type: "object", properties: { item: LIVE_STR("اسم البند"), desc: LIVE_STR("الوصف والمبرر"), qty: { type: "number" }, cost: { type: "number" }, periods: LIVE_INT("عدد الفترات، 1 للبنود غير الدورية"), src: { type: "string", enum: ["DONOR", "SELF", "PARTNER"], description: "DONOR=المانح، SELF=الجمعية، PARTNER=شريك" }, activity: LIVE_STR("اسم النشاط المرتبط") }, required: ["item", "qty", "cost"] } },
+  { name: "update_budget_line", description: "تعديل بند ميزانية موجود بالاسم. أرسل فقط الحقول المتغيرة.", parameters: { type: "object", properties: { item: LIVE_STR("اسم البند الحالي"), qty: { type: "number" }, cost: { type: "number" }, periods: { type: "integer" }, src: { type: "string", enum: ["DONOR", "SELF", "PARTNER"] }, desc: { type: "string" } }, required: ["item"] } },
+  { name: "remove_budget_line", description: "حذف بند ميزانية بالاسم.", parameters: { type: "object", properties: { item: LIVE_STR("اسم البند") }, required: ["item"] } },
+  { name: "set_answer", description: "كتابة إجابة سؤال من أسئلة نموذج المنحة ضمن حده.", parameters: { type: "object", properties: { index: LIVE_INT("رقم السؤال يبدأ من 0"), value: LIVE_STR("الإجابة الكاملة") }, required: ["index", "value"] } },
+  { name: "confirm_experience", description: "تسجيل دليل خبرة الجمعية (شرط سنتين).", parameters: { type: "object", properties: { value: LIVE_STR("الدليل") }, required: ["value"] } },
+  { name: "set_baseline", description: "تحديد خط الأساس لمؤشرات النتائج الناقصة.", parameters: { type: "object", properties: { value: LIVE_STR("القيمة أو طريقة القياس") }, required: ["value"] } },
+  { name: "set_deadline", description: "اعتماد الموعد النهائي: 0 = 31 يناير 2027 (دليل المنحة)، 1 = 15 فبراير 2027 (التعميم).", parameters: { type: "object", properties: { index: LIVE_INT("0 أو 1") }, required: ["index"] } },
+  { name: "set_partner", description: "تحديث الشراكة المقترحة: planned = مخطط لها ولم يُتواصل بعد، remove = حذفها.", parameters: { type: "object", properties: { op: { type: "string", enum: ["planned", "remove"] } }, required: ["op"] } },
+  { name: "go_to_step", description: "نقل الشاشة إلى المرحلة التي تتحدثان عنها ليرى المستخدم التغييرات.", parameters: { type: "object", properties: { step: { type: "string", enum: STEPS.map((x) => x[0]), description: STEPS.map(([k, l]) => k + "=" + l).join("، ") } }, required: ["step"] } },
+] }];
+const LIVE_MAP = {
+  save_org: (a) => ({ type: "set_org", field: a.field, value: a.value }),
+  set_params: (a) => ({ type: "set_param", beneficiaries: a.beneficiaries, duration: a.duration, region: a.region }),
+  set_idea: (a) => ({ type: "set_idea", value: a.value }),
+  set_section: (a) => ({ type: "set_section", key: a.key, value: a.value }),
+  add_activity: (a) => ({ type: "add_activity", ...a }),
+  remove_activity: (a) => ({ type: "remove_activity", name: a.name }),
+  add_budget_line: (a) => ({ type: "add_line", ...a }),
+  update_budget_line: (a) => ({ type: "update_line", ...a }),
+  remove_budget_line: (a) => ({ type: "remove_line", item: a.item }),
+  set_answer: (a) => ({ type: "set_answer", index: a.index, value: a.value }),
+  confirm_experience: (a) => ({ type: "confirm_exp", value: a.value }),
+  set_baseline: (a) => ({ type: "set_baseline", value: a.value }),
+  set_deadline: (a) => ({ type: "set_deadline", index: a.index }),
+  set_partner: (a) => ({ type: "partner", op: a.op }),
+};
+
+function statusForModel() {
+  const r = readiness(), b = budget();
+  return {
+    current_screen: route(),
+    next_questions: gaps().slice(0, 4).map((g) => ({ id: g.id, question: g.q, why: g.why, example_answers: g.quick })),
+    readiness: `${r.ok}/${r.total}`,
+    remaining: r.blockers.slice(0, 8).map((x) => `${x.label}: ${x.msg}`),
+    org: Object.fromEntries(Object.entries(S.org).map(([k, v]) => [k, v.value])),
+    params: S.params, idea: S.idea.seed || null, draft_written: !!S.project,
+    project: S.project ? { title: S.project.title, summary: S.project.summary, problem: S.project.problem, sustainability: S.project.sustainability } : null,
+    activities: S.activities.map((a) => `${a.name} (${a.start}-${a.end})`),
+    budget: S.lines.length ? { total_sar: b.total / 100, donor_sar: b.donor / 100, cap_sar: GRANT.cap / 100, self_share_pct: +b.share.toFixed(1), lines: S.lines.map((l) => `${l.item}: ${l.qty}×${l.unit_cost / 100}×${l.periods} = ${lineTotal(l) / 100} ر.س [${l.src}]${isExcluded(l) ? " — مستبعد من المانح" : ""}`) } : null,
+    answers: S.answers.map((a, i) => ({ index: i, question: GRANT.questions[a.q].q, count: count(a), limit: GRANT.questions[a.q].limit, unit: GRANT.questions[a.q].type === "words" ? "كلمة" : "حرف", approved: a.approved })),
+  };
+}
+
+function liveSystemInstruction() {
+  return [
+    "أنت «مستشار قدمها»: مستشار منح صوتي ذكي وودود. تتحدث بالعربية بلهجة سعودية طبيعية ودافئة، مثل محادثة حقيقية لا استبيان. جملك قصيرة، وسؤال واحد في كل مرة، مع تعليق قصير ودود بين حين وآخر.",
+    "عن المنصة: «قدمها» تساعد الجمعيات غير الربحية السعودية على تجهيز طلب منحة كامل لمنحة محددة: تجمع معلومات الجمعية من ملفاتها ومن حديثها، تقرأ متطلبات المنحة، تكتب مسودة المشروع والأنشطة والمؤشرات والميزانية وإجابات النموذج، ثم تفحص الأهلية والجاهزية قبل التصدير. لا تضمن القبول ولا تعطي نسبة فوز. إذا سأل المستخدم عن المنصة أو ليش تسأل سؤالًا، اشرح باختصار ثم ارجع للمقابلة من حيث توقفت.",
+    KNOWLEDGE,
+    `المنحة الحالية (تجريبية): ${GRANT.name} — ${GRANT.funder}. الأولويات: ${GRANT.priorities.join("، ")}. المناطق: الرياض والقصيم. السقف 500,000 ر.س. أقصى مدة 12 شهرًا. مساهمة ذاتية أو من شركاء ≥10% نقدية أو عينية. مستبعد من المانح: الأراضي والمباني والضيافة والولائم ورواتب الإدارة العليا. معايير التقييم: ${GRANT.criteria.map((c) => c[0] + " " + c[1] + "%").join("، ")}. أسئلة النموذج: ${GRANT.questions.map((q, i) => `${i}) ${q.q} (حد ${q.limit} ${q.type === "words" ? "كلمة" : "حرف"})`).join("؛ ")}.`,
+    "طريقة العمل:",
+    "- ابدأ باستدعاء get_status، ثم رحّب باختصار واسأل أهم سؤال ناقص.",
+    "- بعد كل معلومة مفيدة احفظها فورًا بالأداة المناسبة بصياغة مهنية جاهزة للطلب، وقل بإيجاز ما سجّلته.",
+    "- اسأل دائمًا السؤال الأهم التالي حسب get_status، واذكر سببه بجملة قصيرة عندما يفيد المستخدم.",
+    "- عندما تعرف الجمعية والفكرة وعدد المستفيدين والمدة، اقترح كتابة المسودة، وبعد موافقته استدعِ write_draft وقل إنها تأخذ دقيقة تقريبًا.",
+    "- استخدم go_to_step لنقل الشاشة إلى المرحلة التي تتحدثان عنها.",
+    "- لا تختلق أرقامًا أو إنجازات أو شراكات أو إحصاءات؛ ما لا يعرفه المستخدم يبقى ناقصًا. أكّد الأرقام الملتبسة قبل حفظها.",
+    "- الشراكة غير الموثقة تبقى مقترحة أو مخطط لها، ولا تقل إن الملف جاهز قبل أن يقول get_status ذلك.",
+    "- إذا طلب إنهاء المحادثة ودّعه بلطف.",
+    "الحالة الحالية: " + JSON.stringify(statusForModel()),
+  ].join("\n");
+}
+
+async function liveHandleToolCall(name, args) {
+  args = args || {};
+  if (name === "get_status") return statusForModel();
+  if (name === "go_to_step") { if (STEPS.some((x) => x[0] === args.step)) go(args.step); return { ok: true }; }
+  if (name === "write_draft") {
+    S.chat.push({ role: "log", text: "المستشار يكتب المسودة…" }); renderConvo();
+    if (args.note) S.sources.said.push(String(args.note));
+    await generateDraft(null);
+    return { done: true, source: S.activities[0]?.prov === "gen" ? "Claude" : "مسودة معدّة للعرض", missing: S.draftMissing, status: statusForModel() };
+  }
+  const map = LIVE_MAP[name];
+  if (!map) return { error: "أداة غير معروفة" };
+  const done = applyActions([map(args)].filter(validAction));
+  render();
+  if (done.length) { S.chat.push({ role: "log", text: done.join(" · ") }); renderConvo(); save(); }
+  return done.length ? { saved: done, next_questions: gaps().slice(0, 2).map((g) => g.q) } : { saved: [], note: "لم يُطبّق شيء — تحقق من الاسم أو القيمة" };
+}
+
+const CAPTURE_WORKLET_CODE = `
+class CaptureProcessor extends AudioWorkletProcessor {
+  process(inputs) {
+    const ch = inputs[0] && inputs[0][0];
+    if (ch) {
+      const int16 = new Int16Array(ch.length);
+      for (let i = 0; i < ch.length; i++) { const s = Math.max(-1, Math.min(1, ch[i])); int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
+      this.port.postMessage(int16.buffer, [int16.buffer]);
+    }
+    return true;
+  }
+}
+registerProcessor("capture-processor", CaptureProcessor);
+`;
+function int16ToBase64(arr) { const bytes = new Uint8Array(arr.buffer); let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]); return btoa(bin); }
+function base64ToInt16(b64) { const bin = atob(b64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new Int16Array(bytes.buffer); }
+
+function liveSetStatus(t, speaking) {
+  $("#live-status").textContent = t;
+  const c = $("#mic-caption"); if (c) c.textContent = t;
+  document.querySelectorAll(".mic, .mic-sm").forEach((m) => { m.classList.toggle("listening", liveActive && !speaking); m.classList.toggle("thinking", !!speaking); });
+  $("#hero-wave")?.classList.toggle("on", liveActive);
+}
+function liveAppend(role, text) {
+  const last = S.chat[S.chat.length - 1];
+  if (last && last.live && last.role === role && !last.closed) last.text += text;
+  else S.chat.push({ role, text, live: true, via: "live" });
+  renderConvo();
+}
+function liveCloseTurn() { S.chat.forEach((m) => { if (m.live) m.closed = true; }); save(); }
+
+async function startLiveSession() {
+  if (liveActive || liveConnecting) return;
+  liveConnecting = true;
+  openDrawer(true);
+  $("#live-bar").hidden = false;
+  liveSetStatus("جارٍ الاتصال بالمستشار…");
+  let token, model;
+  try {
+    const r = await fetch("/api/gemini-live-token", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+    const d = await r.json();
+    if (!r.ok) throw new Error(typeof d.error === "string" ? d.error : JSON.stringify(d.error || d));
+    token = d.token; model = d.model || "gemini-3.8-live";
+  } catch (err) { liveConnecting = false; liveSetStatus("⚠️ تعذّر الحصول على إذن الاتصال: " + err.message); return; }
+  try {
+    liveMicStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true } });
+  } catch (err) { liveConnecting = false; liveSetStatus("⚠️ تعذّر الوصول للميكروفون: " + err.message); return; }
+
+  liveWs = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=" + encodeURIComponent(token));
+  liveWs.onopen = () => {
+    liveWs.send(JSON.stringify({ setup: {
+      model: "models/" + model.replace(/^models\//, ""),
+      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
+      systemInstruction: { parts: [{ text: liveSystemInstruction() }] },
+      tools: LIVE_TOOLS,
+      inputAudioTranscription: {},
+      outputAudioTranscription: {},
+    } }));
+  };
+  liveWs.onmessage = async (ev) => {
+    const text = ev.data instanceof Blob ? await ev.data.text() : ev.data;
+    let obj; try { obj = JSON.parse(text); } catch { return; }
+    if (obj.setupComplete) {
+      liveConnecting = false; liveActive = true;
+      liveSetStatus("🎙️ المستشار يسمعك الآن…");
+      await initLiveAudioCapture();
+      // المستشار يبدأ بالترحيب وأول سؤال
+      liveWs.send(JSON.stringify({ realtimeInput: { text: "(بدأت المحادثة الصوتية الآن. رحّب بي باختصار ثم اسألني أهم سؤال.)" } }));
+      return;
+    }
+    if (obj.toolCall) {
+      for (const fc of obj.toolCall.functionCalls || []) {
+        let result;
+        try { result = await liveHandleToolCall(fc.name, fc.args); } catch (e) { result = { error: String(e?.message || e) }; }
+        if (liveWs?.readyState === 1) liveWs.send(JSON.stringify({ toolResponse: { functionResponses: [{ name: fc.name, id: fc.id, response: { result } }] } }));
+      }
+    }
+    const sc = obj.serverContent;
+    if (sc) {
+      if (sc.interrupted) stopLivePlayback();
+      if (sc.inputTranscription?.text) liveAppend("me", sc.inputTranscription.text);
+      if (sc.outputTranscription?.text) liveAppend("ai", sc.outputTranscription.text);
+      for (const p of sc.modelTurn?.parts || []) if (p.inlineData?.data) { liveSetStatus("🔊 المستشار يتكلم… (قاطعه متى شئت)", true); playLiveAudioChunk(p.inlineData.data); }
+      if (sc.turnComplete) { liveCloseTurn(); liveSetStatus("🎙️ المستشار يسمعك الآن…"); }
+    }
+  };
+  liveWs.onerror = () => liveSetStatus("⚠️ خطأ في الاتصال");
+  liveWs.onclose = (e) => {
+    const wasActive = liveActive;
+    liveActive = false; liveConnecting = false; liveWs = null;
+    cleanupLiveAudio();
+    liveCloseTurn();
+    liveSetStatus(wasActive ? "انتهت المحادثة" + (e.reason ? " — " + e.reason : "") : "⚠️ لم يكتمل الاتصال" + (e.reason ? " — " + e.reason : ""));
+  };
+}
+async function initLiveAudioCapture() {
+  liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  const url = URL.createObjectURL(new Blob([CAPTURE_WORKLET_CODE], { type: "application/javascript" }));
+  await liveAudioCtx.audioWorklet.addModule(url);
+  const source = liveAudioCtx.createMediaStreamSource(liveMicStream);
+  liveWorkletNode = new AudioWorkletNode(liveAudioCtx, "capture-processor");
+  liveSendBuffer = []; liveSendBufferSamples = 0;
+  liveWorkletNode.port.onmessage = (ev) => {
+    if (!liveActive || !liveWs || liveWs.readyState !== 1) return;
+    const int16 = new Int16Array(ev.data);
+    liveSendBuffer.push(int16); liveSendBufferSamples += int16.length;
+    if (liveSendBufferSamples >= 1600) {
+      const merged = new Int16Array(liveSendBufferSamples);
+      let off = 0; for (const c of liveSendBuffer) { merged.set(c, off); off += c.length; }
+      liveSendBuffer = []; liveSendBufferSamples = 0;
+      liveWs.send(JSON.stringify({ realtimeInput: { audio: { data: int16ToBase64(merged), mimeType: "audio/pcm;rate=16000" } } }));
+    }
+  };
+  source.connect(liveWorkletNode);
+}
+function stopLivePlayback() { if (livePlaybackCtx) { livePlaybackCtx.close().catch(() => {}); livePlaybackCtx = null; } livePlayCursor = 0; }
+function playLiveAudioChunk(b64) {
+  if (!livePlaybackCtx) { livePlaybackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 }); livePlayCursor = livePlaybackCtx.currentTime; }
+  const int16 = base64ToInt16(b64);
+  const f32 = new Float32Array(int16.length);
+  for (let i = 0; i < int16.length; i++) f32[i] = int16[i] / 0x8000;
+  const buf = livePlaybackCtx.createBuffer(1, f32.length, 24000);
+  buf.getChannelData(0).set(f32);
+  const node = livePlaybackCtx.createBufferSource();
+  node.buffer = buf; node.connect(livePlaybackCtx.destination);
+  const at = Math.max(livePlayCursor, livePlaybackCtx.currentTime);
+  node.start(at); livePlayCursor = at + buf.duration;
+}
+function cleanupLiveAudio() {
+  if (liveWorkletNode) { try { liveWorkletNode.disconnect(); } catch {} liveWorkletNode = null; }
+  if (liveAudioCtx) { liveAudioCtx.close().catch(() => {}); liveAudioCtx = null; }
+  if (liveMicStream) { liveMicStream.getTracks().forEach((t) => t.stop()); liveMicStream = null; }
+  stopLivePlayback();
+}
+function endLiveSession() {
+  if (liveWs) { liveWs.onclose = null; try { liveWs.close(); } catch {} liveWs = null; }
+  liveActive = false; liveConnecting = false;
+  cleanupLiveAudio();
+  liveCloseTurn();
+  $("#live-bar").hidden = true;
+  liveSetStatus("انتهت المحادثة");
+}
+
 // معالجة ما يقوله المستخدم: Claude إن توفر، وإلا قواعد بسيطة. لا يُطبَّق شيء قبل مراجعتك.
 async function handleInput(text, via) {
   if (!text.trim() || busy) return;
+  if (liveActive && liveWs?.readyState === 1) { addMe(text, "text"); liveWs.send(JSON.stringify({ realtimeInput: { text } })); return; }
   if (!drawerOpen) openDrawer(true);
   addMe(text, via);
   S.sources.said.push(text);
@@ -1104,7 +1369,7 @@ const VIEWS = {
       <div class="expert"><span>المنح والجهات المانحة</span><span>عمل الجمعيات والحوكمة</span><span>الإطار المنطقي والمؤشرات</span><span>الميزانية والمساهمة الذاتية</span><span>أسباب الرفض الشائعة</span></div>
       <button type="button" class="mic" id="hero-mic" aria-label="تحدث مع المساعد">${MIC_SVG}</button>
       <div class="wave" id="hero-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="mic-caption" id="mic-caption">${CAP.voice === "sim" ? "الصوت هنا محاكاة: يُشغَّل كلام مثال وتعالجه المنصة كأنك قلته" : "اضغط وتحدث — مثال: «نحن جمعية في الرياض نعمل مع الشباب…»"}</div>
+      <div class="mic-caption" id="mic-caption">${CAP.live === "ready" ? "اضغط وتحدث كأنها مكالمة: المستشار يسمعك ويرد بصوته، وتقدر تقاطعه في أي لحظة" : CAP.voice === "sim" ? "الصوت هنا محاكاة: يُشغَّل كلام مثال وتعالجه المنصة كأنك قلته. المحادثة الصوتية الحية تعمل من نسخة الموقع" : "اضغط وتحدث — مثال: «نحن جمعية في الرياض نعمل مع الشباب…»"}</div>
       <div class="row"><button class="btn gold" id="start-interview">ابدأ المقابلة — المستشار يسألك</button></div>
       <div class="row" style="width:100%;max-width:620px;flex-wrap:nowrap">
         <label class="sr-only" for="hero-text">أو اكتب</label>
@@ -1544,6 +1809,7 @@ function exportCsv() {
 }
 
 // ---------- أحداث عامة ----------
+$("#live-end").onclick = endLiveSession;
 $("#fab").onclick = () => openDrawer(!drawerOpen);
 $("#close-drawer").onclick = () => openDrawer(false);
 $("#mic-sm").onclick = () => micPress();
@@ -1566,6 +1832,15 @@ render();
 (async () => {
   const hasRuntime = !!(window.claude && window.claude.use);
   try { if (hasRuntime) [sample, downloads] = await Promise.all([window.claude.use("sample"), window.claude.use("downloads")]); } catch {}
+  if (sample) CAP.aiVia = "artifact";
+  CAP.live = "none";
+  if (!hasRuntime && /^https?:$/.test(location.protocol)) {
+    // نسخة الموقع: نفس مسارات الخادم في براندي. الدالة ترد 405 على GET إن كانت موجودة.
+    const probe = async (u) => { try { return (await fetch(u)).status === 405; } catch { return false; } };
+    const [hasClaude, hasLive] = await Promise.all([probe("/api/anthropic"), probe("/api/gemini-live-token")]);
+    if (hasClaude) { sample = proxySample(); CAP.aiVia = "proxy"; }
+    if (hasLive && navigator.mediaDevices?.getUserMedia && window.AudioWorkletNode) CAP.live = "ready";
+  }
   CAP.ai = sample ? "real" : "sim";
   CAP.downloads = downloads ? "real" : hasRuntime ? "none" : "blob";
   render();
