@@ -1,0 +1,25 @@
+services:
+  app:
+    # Node + Chromium (لتوليد PDF)
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    command: sleep infinity
+    volumes:
+      - ..:/workspace:cached
+    environment:
+      DATABASE_URL: postgresql://qaddimha:qaddimha_dev@db:5432/qaddimha
+      APP_ENV: development
+      STORAGE_DIR: /workspace/storage
+      PAYMENTS_MODE: simulated
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qaddimha
+      POSTGRES_PASSWORD: qaddimha_dev
+      POSTGRES_DB: qaddimha
+    volumes:
+      - devcontainer_pg:/var/lib/postgresql/data
+volumes:
+  devcontainer_pg:

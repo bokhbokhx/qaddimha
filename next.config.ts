@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["playwright-core", "exceljs", "mammoth", "unpdf", "bcryptjs", "docx", "jszip"],
   experimental: {
-    serverActions: { bodySizeLimit: "2mb" },
+    // نطاقات Codespaces للتجربة؛ أضف نطاق الإنتاج عبر وكيل عكسي يمرر x-forwarded-host
+    serverActions: { bodySizeLimit: "2mb", allowedOrigins: ["*.app.github.dev"] },
   },
   turbopack: {
     rules: {
