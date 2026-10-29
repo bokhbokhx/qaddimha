@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>قدمها — عرض تفاعلي</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script>document.documentElement.lang = "ar"; document.documentElement.dir = "rtl";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Noto+Kufi+Arabic:wght@600;800&display=swap">
+<style>
+/* التخطيط: شريط مراحل أعلى + محتوى المرحلة + لوحة «يحتاج إجراء» جانبية تُطوى تحت المحتوى على الجوال */
+:root {
+  --bg: #faf7f0; --surface: #ffffff; --ink: #1c2b25; --muted: #5d6b64; --line: #e4ddcd;
+  --brand: #0f3d2e; --brand-2: #1f6b4a; --brand-soft: #e7f1ea; --gold: #b8903a; --gold-soft: #f7eed8;
+  --ok: #17603a; --ok-soft: #e3f2e8; --warn: #7a5b12; --warn-soft: #fbf1d8; --bad: #9a2f1f; --bad-soft: #fbe8e4;
+  --on-brand: #ffffff;
+  --display: "Noto Kufi Arabic", "IBM Plex Sans Arabic", Tahoma, sans-serif;
+  --body: "IBM Plex Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1714; --surface: #16211c; --ink: #e8efe9; --muted: #9fb0a7; --line: #2a3a33;
+  --brand: #5fbf8f; --brand-2: #7fd1a7; --brand-soft: #1b3027; --gold: #d9b45e; --gold-soft: #2c2716;
+  --ok: #7fd1a7; --ok-soft: #173326; --warn: #e6c46e; --warn-soft: #2e2814; --bad: #f19a88; --bad-soft: #3a1d18;
+  --on-brand: #0f1714; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1714; --surface: #16211c; --ink: #e8efe9; --muted: #9fb0a7; --line: #2a3a33;
+  --brand: #5fbf8f; --brand-2: #7fd1a7; --brand-soft: #1b3027; --gold: #d9b45e; --gold-soft: #2c2716;
+  --ok: #7fd1a7; --ok-soft: #173326; --warn: #e6c46e; --warn-soft: #2e2814; --bad: #f19a88; --bad-soft: #3a1d18;
+  --on-brand: #0f1714; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { direction: rtl; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.75; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); color: var(--brand); text-wrap: balance; margin: 0; line-height: 1.5; }
+h1 { font-size: 1.6rem; } h2 { font-size: 1.2rem; } h3 { font-size: 1rem; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.tab { font-variant-numeric: tabular-nums; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* الشريط العلوي */
+.top { background: var(--brand); color: var(--on-brand); }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 12px; }
+.logo { font-family: var(--display); font-weight: 800; font-size: 1.5rem; }
+.demo-pill { background: var(--gold-soft); color: var(--warn); border-radius: 999px; padding: 2px 12px; font-size: .8rem; font-weight: 500; }
+.app-title { font-size: .9rem; opacity: .85; }
+
+/* المراحل */
+.steps { border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--brand); }
+.steps-scroll { overflow-x: auto; }
+.steps ol { list-style: none; margin: 0; padding-block: 10px; display: flex; gap: 6px; min-width: max-content; }
+.steps a { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--muted); padding: 6px 12px; border-radius: 10px; font-size: .9rem; white-space: nowrap; }
+.steps a:hover { background: var(--brand-soft); color: var(--ink); }
+.steps a[aria-current="page"] { background: var(--brand); color: var(--on-brand); }
+.dot { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: .75rem; border: 1.5px solid currentColor; }
+.steps a.done .dot { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+
+/* الهيكل */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; padding-block: 24px 48px; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+main { min-width: 0; display: grid; gap: 16px; align-content: start; }
+aside { display: grid; gap: 16px; align-content: start; }
+.head { display: grid; gap: 4px; }
+.head p { color: var(--muted); max-width: 62ch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.between { justify-content: space-between; }
+.muted { color: var(--muted); font-size: .85rem; }
+.src { color: var(--muted); font-size: .8rem; }
+.src q { border-inline-start: 2px solid var(--gold); padding-inline-start: 8px; display: block; margin-top: 2px; quotes: "«" "»"; }
+
+.btn { border: 0; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-weight: 500; background: var(--brand); color: var(--on-brand); }
+.btn:hover { filter: brightness(1.08); }
+.btn.sec { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+.btn.gold { background: var(--gold); color: #1c2b25; }
+.btn.small { padding: 4px 10px; font-size: .85rem; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; filter: none; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 1px 10px; font-size: .78rem; font-weight: 500; white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.neutral { background: var(--brand-soft); color: var(--brand); }
+.chip.gold { background: var(--gold-soft); color: var(--warn); }
+
+.list { display: grid; }
+.item { display: grid; gap: 6px; padding-block: 12px; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; padding-top: 0; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: .85rem; font-weight: 500; }
+input[type=text], input[type=number], select, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
+textarea { resize: vertical; line-height: 1.9; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .grid3, .grid2 { grid-template-columns: minmax(0, 1fr); } }
+
+.notice { border-radius: 12px; padding: 10px 14px; font-size: .9rem; }
+.notice.warn { background: var(--warn-soft); color: var(--warn); }
+.notice.ok { background: var(--ok-soft); color: var(--ok); }
+.notice.bad { background: var(--bad-soft); color: var(--bad); }
+.notice.gold { background: var(--gold-soft); color: var(--warn); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.kpi b { display: block; font-size: 1.15rem; color: var(--ink); }
+.kpi span { color: var(--muted); font-size: .8rem; }
+
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: .88rem; }
+th { background: var(--brand); color: var(--on-brand); text-align: right; font-weight: 500; padding: 8px; }
+td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+td input, td select { padding: 4px 6px; }
+td.num, th.num { text-align: left; direction: ltr; font-variant-numeric: tabular-nums; }
+tr.excluded td { background: var(--bad-soft); }
+
+.meter { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.meter > i { display: block; height: 100%; background: var(--brand-2); transition: width .4s; }
+.side h3 { font-size: .95rem; }
+.side ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: .88rem; }
+.side li a { color: var(--bad); text-decoration: none; }
+.side li a:hover { text-decoration: underline; }
+
+.chat { display: grid; gap: 8px; }
+.bubble { border-radius: 14px; padding: 8px 12px; max-width: 92%; font-size: .9rem; }
+.bubble.ai { background: var(--brand-soft); justify-self: start; }
+.bubble.me { background: var(--gold-soft); justify-self: end; }
+.option { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 6px; }
+.option.picked { border-color: var(--brand-2); background: var(--brand-soft); }
+
+.diff del { background: var(--bad-soft); color: var(--bad); }
+.diff ins { background: var(--ok-soft); color: var(--ok); text-decoration: none; }
+
+.doc { background: #fff; color: #1c2b25; border-radius: 6px; padding: 28px 26px; box-shadow: 0 2px 14px rgba(0,0,0,.12); max-width: 560px; justify-self: center; width: 100%; position: relative; overflow: hidden; }
+.doc h4 { font-family: var(--display); color: #0f3d2e; margin: 14px 0 4px; font-size: 1rem; border-bottom: 1.5px solid #b8903a; padding-bottom: 2px; }
+.doc .stamp { position: absolute; inset: 40% 0 auto; text-align: center; font-family: var(--display); font-size: 4rem; color: rgba(184,144,58,.16); transform: rotate(-25deg); pointer-events: none; }
+.doc .mini-logo { width: 48px; height: 48px; border-radius: 8px; background: #0f3d2e; color: #d6b25e; display: grid; place-items: center; font-family: var(--display); font-weight: 800; }
+.doc small { color: #5d6b64; }
+.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.file { border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: .85rem; display: grid; gap: 2px; }
+.file b { font-family: var(--display); color: var(--brand); }
+footer { color: var(--muted); font-size: .8rem; padding-block: 0 32px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <div class="row"><span class="logo">قدمها</span><span class="demo-pill">عرض تفاعلي — بيانات تجريبية غير حقيقية</span></div>
+    <div class="app-title">جمعية أثر للتنمية المجتمعية · منحة تمكين المجتمع — تجريبية</div>
+  </div>
+</div>
+<nav class="steps" aria-label="مراحل الطلب"><div class="wrap steps-scroll"><ol id="steps"></ol></div></nav>
+<div class="wrap layout">
+  <main id="view" aria-live="polite"></main>
+  <aside class="side" id="side"></aside>
+</div>
+<footer class="wrap">هذه صفحة توضيحية تحاكي رحلة المنصة في المتصفح دون خادم. التطبيق الكامل (رفع ملفات حقيقية، حسابات، نسخ، تصدير PDF وWord وExcel) موجود في المستودع.</footer>
+
+<script>
+// ===== البيانات التجريبية (مطابقة لبيانات التطبيق) =====
+const S = {
+  app: { beneficiaries: 150, duration: 12, region: "" },
+  facts: [
+    { key: "legal", label: "الاسم القانوني", value: "جمعية أثر للتنمية المجتمعية", status: "CONFIRMED", src: "الملف التعريفي — فقرة 3", ex: "الاسم القانوني: جمعية أثر للتنمية المجتمعية" },
+    { key: "entity", label: "نوع الكيان", value: "جمعية أهلية", status: "CONFIRMED", src: "الملف التعريفي — فقرة 4", ex: "نوع الكيان: جمعية أهلية" },
+    { key: "mission", label: "الرسالة", value: "تمكين الشباب في منطقة الرياض بالمهارات والفرص عبر برامج تدريبية وتطوعية.", status: "CONFIRMED", src: "الملف التعريفي — فقرة 7", ex: "الرسالة: تمكين الشباب في منطقة الرياض" },
+    { key: "groups", label: "الفئات المستهدفة", value: "الشباب، الباحثون عن عمل", status: "CONFIRMED", src: "الملف التعريفي — فقرة 10", ex: "الفئات المستهدفة: الشباب، الباحثون عن عمل." },
+    { key: "programs", label: "البرامج الحالية", value: "برنامج «مهارتي» للتدريب الرقمي منذ 2022، برنامج «سواعد» للتطوع منذ 2021", status: "EXTRACTED", src: "الملف التعريفي — فقرة 11", ex: "البرامج الحالية: برنامج «مهارتي» للتدريب الرقمي منذ 2022" },
+    { key: "results", label: "نتائج سابقة", value: "تدريب 320 شابًا وشابة في «مهارتي» (عام 2024، المصدر: التقرير السنوي) · رضا المستفيدين مرتفع (بلا مصدر)", status: "EXTRACTED", src: "الملف التعريفي — فقرة 13", ex: "نتائج سابقة: تدريب 320 شابًا وشابة في برنامج مهارتي خلال عام 2024" },
+    { key: "team", label: "الفريق", value: "مدير تنفيذي، منسقا برامج، محاسب بدوام جزئي، و25 متطوعًا", status: "EXTRACTED", src: "الملف التعريفي — فقرة 15", ex: "الفريق: مدير تنفيذي، منسقا برامج" },
+    { key: "supervisor", label: "الجهة المشرفة", value: "", status: "MISSING", src: "", ex: "" },
+  ],
+  docs: { license: true, financials: false, pledge: false },
+  grantFacts: [
+    ["الجهة", "صندوق الأثر التجريبي للتنمية (جهة وهمية)", "الدليل — فقرة 3"],
+    ["محاور الدعم", "المهارات الرقمية للشباب · التهيئة لسوق العمل · العمل التطوعي", "الدليل — فقرة 6"],
+    ["المناطق المؤهلة", "منطقة الرياض · منطقة القصيم", "الدليل — فقرة 9"],
+    ["الحد الأعلى", "500,000 ر.س", "الدليل — فقرة 14"],
+    ["أقصى مدة", "12 شهرًا", "الدليل — فقرة 15"],
+    ["المساهمة المطلوبة", "10% على الأقل من الإجمالي (نقدية أو عينية)", "الدليل — فقرة 16"],
+    ["التكاليف المستبعدة", "شراء الأراضي أو المباني · الضيافة والولائم · رواتب الإدارة العليا", "الدليل — فقرة 18"],
+  ],
+  deadline: { resolved: null, options: [["31 يناير 2027، 11:59 م", "دليل المنحة — فقرة 20"], ["15 فبراير 2027، 11:59 م", "التعميم التجريبي — فقرة 3"]] },
+  grantConfirmed: false,
+  manual: { exp: null, fit: null },
+  idea: { picked: null, approved: false, summary: "", asked: false },
+  sections: [
+    { key: "summary", label: "الملخص التنفيذي", text: "يهدف مشروع «جاهز رقميًا» إلى تمكين 150 شابًا وشابة في منطقة الرياض خلال 12 شهرًا من المهارات الرقمية الأساسية والتهيئة لسوق العمل، عبر تدريب عملي وإرشاد مهني ومبادرات تطوعية.", status: "DRAFT", est: true },
+    { key: "problem", label: "المشكلة ودليل الحاجة", text: "يواجه عدد من الشباب الباحثين عن عمل في منطقة الرياض فجوة في المهارات الرقمية. [يحتاج استكمال: دليل الحاجة مع مصدره]", status: "DRAFT", est: false },
+    { key: "objectives", label: "الأهداف القابلة للقياس", text: "1. تدريب 150 شابًا وشابة على المهارات الرقمية الأساسية.\n2. إرشاد مهني لجميع المتدربين.\n3. 3000 ساعة تطوع رقمي.", status: "DRAFT", est: true },
+    { key: "outcomes", label: "النتائج المستهدفة", text: "تحسن المهارات الرقمية بالاختبار القبلي والبعدي، وحصول نسبة من المتدربين على عمل خلال 6 أشهر. (النتائج تغيير لدى المستفيدين؛ المخرجات ما ينتجه المشروع مباشرة.)", status: "DRAFT", est: true },
+    { key: "sustainability", label: "الاستدامة", text: "يُدمج المحتوى في برنامج «مهارتي» بعد انتهاء الدعم وتستمر المبادرات عبر «سواعد». لا يفترض المشروع عوائد تجارية.", status: "DRAFT", est: false },
+  ],
+  lines: [
+    { item: "أجور المدربين", cc: "التدريب", qty: 480, unit: 25000, calc: "once", periods: 1, src: "DONOR", kind: "CASH", est: true },
+    { item: "اشتراك منصة تعلم رقمية", cc: "المنصات الرقمية", qty: 1, unit: 300000, calc: "rec", periods: 12, followD: true, src: "DONOR", kind: "CASH", est: true },
+    { item: "مواد تدريبية", cc: "التدريب", qty: 150, unit: 20000, calc: "once", periods: 1, followB: true, src: "DONOR", kind: "CASH", est: true },
+    { item: "مرشدون مهنيون", cc: "الإرشاد", qty: 300, unit: 30000, calc: "once", periods: 1, src: "DONOR", kind: "CASH", est: true },
+    { item: "ضيافة ورش العمل", cc: "الضيافة", qty: 20, unit: 150000, calc: "once", periods: 1, src: "DONOR", kind: "CASH", est: true },
+    { item: "منسق المشروع (دوام جزئي)", cc: "الإدارة", qty: 1, unit: 600000, calc: "rec", periods: 12, followD: true, src: "SELF", kind: "CASH", est: true },
+    { item: "قاعة تدريب إضافية (شريك مقترح)", cc: "المرافق", qty: 1, unit: 400000, calc: "rec", periods: 6, src: "PARTNER", kind: "IN_KIND", est: true },
+    { item: "التقييم والقياس", cc: "التقييم", qty: 1, unit: 2500000, calc: "once", periods: 1, src: "DONOR", kind: "CASH", est: true },
+  ],
+  answers: [
+    { q: "صف المشروع باختصار", type: "words", limit: 150, text: "«جاهز رقميًا» مشروع لمدة 12 شهرًا يمكّن 150 شابًا وشابة في منطقة الرياض من المهارات الرقمية والتهيئة لسوق العمل، عبر تدريب عملي وإرشاد مهني ومبادرات تطوعية، ويبني على خبرة الجمعية في برنامج «مهارتي».", approved: false, stale: false },
+    { q: "كيف ستقيسون أثر المشروع؟", type: "chars", limit: 1000, text: "اختبار قبلي وبعدي للمهارات بمستهدف تحسن 20%، ومتابعة موثقة بعد 6 أشهر لنسبة الحاصلين على عمل بمستهدف 30%، وسجلات الحضور وساعات التطوع، وتقرير تقييم نهائي من جهة متعاقدة.", approved: false, stale: false },
+    { q: "ما خطة الاستدامة بعد انتهاء الدعم؟", type: "words", limit: 200, text: "تدمج الجمعية المحتوى في «مهارتي»، وتستمر المبادرات عبر «سواعد»، ويواصل الخريجون كمتطوعين ومرشدين للدفعات الجديدة.", approved: false, stale: false },
+  ],
+  proposals: [],
+  approvedVersion: null,
+  paid: false,
+};
+
+const STEPS = [
+  ["start", "البداية"], ["org", "عرّفنا بجمعيتك"], ["grant", "أضف فرصة التمويل"], ["eligibility", "الأهلية"],
+  ["idea", "طوّر الفكرة"], ["project", "المشروع"], ["budget", "الميزانية"], ["answers", "إجابات الجهة"],
+  ["readiness", "الجاهزية"], ["export", "التصدير"],
+];
+
+// ===== أدوات =====
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sar = (h) => (h / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+const words = (t) => t.trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+const chars = (t) => Array.from(t.trim()).length;
+const lineTotal = (l) => l.qty * l.unit * (l.calc === "rec" ? l.periods : 1); // بالهللة، أعداد صحيحة
+const EXCLUDED = ["ضيافة", "ولائم", "أراض", "مبان"];
+const isExcluded = (l) => l.src === "DONOR" && EXCLUDED.some((k) => (l.item + " " + l.cc).includes(k));
+
+function budget() {
+  const b = { total: 0, donor: 0, self: 0, partner: 0, inKind: 0 };
+  for (const l of S.lines) {
+    const t = lineTotal(l);
+    b.total += t;
+    if (l.src === "DONOR") b.donor += t; else if (l.src === "SELF") b.self += t; else b.partner += t;
+    if (l.kind === "IN_KIND" && l.src !== "DONOR") b.inKind += t;
+  }
+  b.share = b.total ? ((b.total - b.donor) / b.total) * 100 : 0;
+  return b;
+}
+
+// ===== تقييم الشروط: المجهول لا يصبح مستوفى =====
+function requirements() {
+  const b = budget();
+  const region = S.app.region;
+  return [
+    { id: "r1", cat: "أهلية الجمعية", text: "جمعية أهلية أو مؤسسة أهلية مسجلة", res: "MET", ev: "نوع الكيان المؤكد: جمعية أهلية", go: "org" },
+    { id: "r2", cat: "أهلية الجمعية", text: "التنفيذ في منطقة الرياض أو القصيم", res: !region ? "NV" : /الرياض|القصيم/.test(region) ? "MET" : "NOT", ev: region ? `منطقة التنفيذ: ${region}` : "لم تُحدَّد منطقة التنفيذ", go: "eligibility" },
+    { id: "r3", cat: "أهلية الجمعية", text: "خبرة سنتين على الأقل في برامج الشباب", res: S.manual.exp ? "MET" : "NV", ev: S.manual.exp || "يحتاج قرارك مع دليل", go: "eligibility" },
+    { id: "r4", cat: "ملاءمة المشروع", text: "المشروع ضمن محاور الدعم المعلنة", res: S.manual.fit ? "MET" : "NV", ev: S.manual.fit || "يحتاج قرارك مع دليل", go: "eligibility" },
+    { id: "m1", cat: "المستندات", text: "شهادة تسجيل سارية", res: S.docs.license ? "MET" : "NV", ev: "مرفوعة — سارية حتى 2027-12-31", go: "eligibility" },
+    { id: "m2", cat: "المستندات", text: "آخر قوائم مالية مدققة", res: S.docs.financials ? "MET" : "NV", ev: S.docs.financials ? "مرفوعة" : "غير مرفوعة على المنصة (قد تكون متوفرة لديكم)", go: "eligibility" },
+    { id: "m3", cat: "المستندات", text: "خطاب تعهد بالمساهمة الذاتية", res: S.docs.pledge ? "MET" : "NV", ev: S.docs.pledge ? "مرفوع" : "غير مرفوع على المنصة", go: "eligibility" },
+    { id: "t1", cat: "اشتراطات مالية", text: "المطلوب من المانح ≤ 500,000 ر.س", res: b.donor <= 50000000 ? "MET" : "NOT", ev: `المطلوب من المانح ${sar(b.donor)}`, go: "budget" },
+    { id: "t2", cat: "اشتراطات مالية", text: "المدة ≤ 12 شهرًا", res: S.app.duration <= 12 ? "MET" : "NOT", ev: `المدة ${S.app.duration} شهرًا`, go: "budget" },
+    { id: "t3", cat: "اشتراطات مالية", text: "مساهمة غير مانحة ≥ 10%", res: b.share >= 10 ? "MET" : "NOT", ev: `المساهمة ${b.share.toFixed(2)}%`, go: "budget" },
+    { id: "t4", cat: "اشتراطات مالية", text: "لا تكاليف مستبعدة ممولة من المانح", res: S.lines.some(isExcluded) ? "NOT" : "MET", ev: S.lines.some(isExcluded) ? "بند مستبعد: " + S.lines.filter(isExcluded).map((l) => l.item).join("، ") : "لا توجد بنود مستبعدة", go: "budget" },
+  ];
+}
+const RES = { MET: ["مستوفى", "ok"], NV: ["يحتاج تحققًا", "warn"], NOT: ["غير مستوفى", "bad"] };
+
+function readiness() {
+  const items = [];
+  const add = (ok, label, msg, go, counted = true) => items.push({ ok, label, msg, go, counted });
+  add(!S.facts.some((f) => f.status === "EXTRACTED"), "ملف الجمعية", "معلومات مستخرجة لم تُؤكد", "org", false);
+  add(S.grantConfirmed, "بيانات المنحة", "أكّد البيانات المستخرجة", "grant");
+  add(!!S.deadline.resolved, "تعارض الموعد النهائي", "مصدران يذكران موعدين مختلفين", "grant");
+  for (const r of requirements()) add(r.res === "MET", `${r.text}`, `${RES[r.res][0]}: ${r.ev}`, r.go);
+  add(S.idea.approved, "ملخص الفكرة", "اعتمد الملخص", "idea");
+  for (const s of S.sections) add(s.status === "APPROVED" && !/\[يحتاج استكمال/.test(s.text), s.label, s.status === "REVIEW" ? "يحتاج مراجعة بعد تعديل مؤثر" : /\[يحتاج استكمال/.test(s.text) ? "موضع «يحتاج استكمال»" : "لم يُعتمد", "project");
+  add(!S.lines.some((l) => l.est), "بنود الميزانية التقديرية", `${S.lines.filter((l) => l.est).length} بنود تحتاج اعتمادًا`, "budget");
+  for (const a of S.answers) {
+    const n = a.type === "words" ? words(a.text) : chars(a.text);
+    add(a.approved && !a.stale && n <= a.limit, a.q, a.stale ? "قديمة بعد تعديل المشروع" : n > a.limit ? "تتجاوز الحد" : "لم تُعتمد", "answers");
+  }
+  add(S.proposals.length === 0, "مقترحات التعديل", `${S.proposals.length} مقترحات بانتظار قرارك`, "budget");
+  const counted = items.filter((i) => i.counted);
+  const ok = counted.filter((i) => i.ok).length;
+  return { items, blockers: items.filter((i) => !i.ok), pct: Math.floor((ok / counted.length) * 100), ok, total: counted.length };
+}
+
+// ===== التنقل =====
+function route() {
+  const h = (location.hash || "#start").slice(1);
+  return STEPS.some((s) => s[0] === h) ? h : "start";
+}
+function go(name) { location.hash = name; }
+window.addEventListener("hashchange", render);
+
+function stepDone(name) {
+  const r = readiness();
+  return {
+    org: !S.facts.some((f) => f.status === "EXTRACTED"),
+    grant: S.grantConfirmed && !!S.deadline.resolved,
+    eligibility: requirements().filter((x) => x.cat !== "اشتراطات مالية").every((x) => x.res === "MET"),
+    idea: S.idea.approved,
+    project: S.sections.every((s) => s.status === "APPROVED"),
+    budget: !S.lines.some((l) => l.est) && !S.lines.some(isExcluded),
+    answers: S.answers.every((a) => a.approved && !a.stale),
+    readiness: !!S.approvedVersion,
+    export: S.paid && !!S.approvedVersion && r.blockers.length === 0,
+  }[name];
+}
+
+function render() {
+  const cur = route();
+  $("#steps").innerHTML = STEPS.map(([k, l], i) => `<li><a href="#${k}" class="${stepDone(k) ? "done" : ""}" ${k === cur ? 'aria-current="page"' : ""}><span class="dot tab">${stepDone(k) ? "✓" : i}</span>${l}</a></li>`).join("");
+  const cur_a = document.querySelector('.steps a[aria-current="page"]');
+  if (cur_a) cur_a.scrollIntoView({ block: "nearest", inline: "center" });
+  $("#view").innerHTML = VIEWS[cur]();
+  renderSide();
+  bind(cur);
+}
+
+function renderSide() {
+  const r = readiness();
+  const b = budget();
+  $("#side").innerHTML = `
+    <section class="panel">
+      <h3>ملخص الطلب</h3>
+      <div class="grid3">
+        <div class="field"><label for="p-b">المستفيدون</label><input id="p-b" type="number" min="1" value="${S.app.beneficiaries}" class="tab"></div>
+        <div class="field"><label for="p-d">المدة (شهر)</label><input id="p-d" type="number" min="1" value="${S.app.duration}" class="tab"></div>
+        <div class="field"><label for="p-r">المنطقة</label><select id="p-r"><option value="">— اختر —</option>${["منطقة الرياض", "منطقة القصيم", "منطقة مكة المكرمة"].map((x) => `<option ${x === S.app.region ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+      </div>
+      <button class="btn small" id="p-save">حفظ وتحليل الأثر</button>
+      <div id="impact"></div>
+      <div class="row between muted"><span>إجمالي الميزانية</span><b class="tab">${sar(b.total)}</b></div>
+    </section>
+    <section class="panel">
+      <div class="row between"><h3>الجاهزية</h3><span class="chip ${r.blockers.length ? "warn" : "ok"}">${r.blockers.length ? r.blockers.length + " عوائق" : "جاهز للتقديم"}</span></div>
+      <div class="meter" role="progressbar" aria-valuenow="${r.pct}" aria-valuemin="0" aria-valuemax="100" aria-label="اكتمال المتطلبات المعروفة"><i style="width:${r.pct}%"></i></div>
+      <div class="muted tab">اكتمال المتطلبات المعروفة ${r.pct}% (${r.ok} من ${r.total}) — ليست نسبة قبول</div>
+      <h3>يحتاج إجراء</h3>
+      ${r.blockers.length ? `<ul>${r.blockers.slice(0, 6).map((x) => `<li><a href="#${x.go}">• ${esc(x.label)}</a></li>`).join("")}${r.blockers.length > 6 ? `<li><a href="#readiness">كل العوائق (${r.blockers.length})</a></li>` : ""}</ul>` : `<p class="muted">لا توجد عوائق.</p>`}
+    </section>`;
+  $("#p-save").onclick = saveParams;
+}
+
+// ===== تحليل أثر التعديل =====
+function replaceNum(text, from, to) {
+  return text.replace(new RegExp(`(?<![\\d,.])${from}(?![\\d,.])`, "g"), String(to));
+}
+function saveParams() {
+  const nb = Math.max(1, parseInt($("#p-b").value, 10) || S.app.beneficiaries);
+  const nd = Math.max(1, parseInt($("#p-d").value, 10) || S.app.duration);
+  const nr = $("#p-r").value;
+  const out = [];
+  if (nb !== S.app.beneficiaries) {
+    const from = S.app.beneficiaries;
+    let recalc = 0;
+    S.lines.forEach((l) => { if (l.followB) { l.qty = nb; recalc++; } });
+    S.sections.forEach((s) => {
+      const after = replaceNum(s.text, from, nb);
+      if (after !== s.text) { S.proposals.push({ kind: "sec", key: s.key, label: s.label, before: s.text, after }); if (s.status === "APPROVED") s.status = "REVIEW"; }
+    });
+    S.answers.forEach((a, i) => {
+      const after = replaceNum(a.text, from, nb);
+      if (after !== a.text) { S.proposals.push({ kind: "ans", key: i, label: a.q, before: a.text, after }); a.stale = true; a.approved = false; }
+    });
+    out.push(`عدد المستفيدين ${from} ← ${nb}: أُعيد حساب ${recalc} بند فورًا، وأُنشئت ${S.proposals.length} مقترحات تعديل نصية تنتظر موافقتك.`);
+    S.app.beneficiaries = nb;
+  }
+  if (nd !== S.app.duration) {
+    let recalc = 0;
+    S.lines.forEach((l) => { if (l.followD && l.calc === "rec") { l.periods = nd; recalc++; } });
+    out.push(`المدة ${S.app.duration} ← ${nd} شهرًا: أُعيد حساب ${recalc} بند دوري.`);
+    S.app.duration = nd;
+  }
+  if (nr !== S.app.region) { S.app.region = nr; out.push(`منطقة التنفيذ: ${nr || "—"}`); }
+  if (out.length) S.approvedVersion = S.approvedVersion ? { ...S.approvedVersion, outdated: true } : null;
+  render();
+  if (out.length) $("#impact").innerHTML = `<div class="notice warn">${out.map(esc).join("<br>")}<br>حُفظت نسخة قبل التغيير.${S.proposals.length ? ' <a href="#budget">راجع المقترحات</a>' : ""}</div>`;
+}
+
+// ===== الصفحات =====
+const VIEWS = {
+  start: () => `
+    <div class="head"><h1>جهّز طلب دعم يعكس قدرات جمعيتك</h1>
+    <p>هذا عرض تفاعلي لرحلة «قدمها» بجمعية ومنحة تجريبيتين. جرّب كل خطوة: أكّد البيانات، حدد المنطقة، اعتمد الأقسام، عدّل الميزانية، وغيّر عدد المستفيدين لترى أثره على الطلب كله.</p></div>
+    <section class="panel">
+      <h2>كيف تعمل المنصة</h2>
+      <div class="list">
+        ${[["ملف الجمعية", "نستخرج المعلومات من مستنداتكم مع مصدر كل معلومة، ولا تُعتمد إلا بتأكيدكم."],
+           ["فرصة التمويل", "نستخرج الشروط والأسئلة وحدودها من الدليل، ونعرض أي تعارض بين المصادر لتحسموه."],
+           ["الأهلية", "كل شرط: مستوفى أو غير مستوفى أو يحتاج تحققًا. المعلومة المجهولة لا تُحسب مستوفاة."],
+           ["الفكرة والمشروع", "حوار قصير يقود لملخص تعتمدونه، ثم أقسام ومؤشرات وخطة، وكل رقم مقترح موسوم «تقديري»."],
+           ["الميزانية", "حسابات دقيقة بالهللة، فصل النقدي عن العيني، وفحص السقف والبنود المستبعدة والمساهمة."],
+           ["الجاهزية والتصدير", "لا يُسمّى الطلب «جاهزًا» ما دام عائق قائمًا. التصدير من نسخة معتمدة واحدة."]]
+          .map(([t, d], i) => `<div class="item"><div class="row"><span class="dot tab" style="color:var(--brand)">${i + 1}</span><b>${t}</b></div><p class="muted">${d}</p></div>`).join("")}
+      </div>
+      <div class="row"><button class="btn" data-go="org">ابدأ الجولة</button></div>
+    </section>
+    <section class="panel"><h3>ما لا تعد به المنصة</h3><p class="muted">لا ضمان للقبول ولا نسبة احتمالية للفوز، ولا اختلاق لنتائج أو شراكات أو أسعار. الجمعية تعتمد المحتوى وتقدّم الطلب بنفسها.</p></section>`,
+
+  org: () => `
+    <div class="head"><h1>عرّفنا بجمعيتك</h1><p>استخرجنا هذه المعلومات من «الملف التعريفي» المرفوع. كل معلومة تحتفظ بمصدرها وموضعها.</p></div>
+    <section class="panel"><div class="list">
+      ${S.facts.map((f, i) => `
+        <div class="item">
+          <div class="row between"><b>${f.label}</b>${f.status === "CONFIRMED" ? '<span class="chip ok">مؤكدة</span>' : f.status === "EXTRACTED" ? '<span class="chip warn">مستخرجة — تحتاج تأكيدًا</span>' : '<span class="chip neutral">ناقصة</span>'}</div>
+          <p>${f.value ? esc(f.value) : '<span class="muted">— غير متوفرة في المستندات. غيابها لا يعني أن الجمعية لا تملكها —</span>'}</p>
+          ${f.src ? `<div class="src">المصدر: ${f.src}<q>${esc(f.ex)}</q></div>` : ""}
+          ${f.status === "EXTRACTED" ? `<div class="row"><button class="btn small" data-confirm="${i}">تأكيد كما هي</button></div>` : ""}
+          ${f.key === "results" && f.status !== "MISSING" ? '<div class="notice gold">نتيجة «رضا المستفيدين مرتفع» بلا مصدر: لن تُستخدم في الطلب قبل توثيقها.</div>' : ""}
+        </div>`).join("")}
+    </div></section>
+    <div class="row"><button class="btn" data-go="grant">التالي: أضف فرصة التمويل</button></div>`,
+
+  grant: () => `
+    <div class="head"><h1>راجع ما استخرجناه من دليل المنحة</h1><p>الرابط المرجعي يُحفظ مرجعًا فقط؛ التحليل من الملفات المرفوعة. لا نفترض شرطًا غير مذكور.</p></div>
+    <section class="panel"><div class="list">
+      ${S.grantFacts.map(([k, v, s]) => `<div class="item"><div class="row between"><b>${k}</b><span class="chip ${S.grantConfirmed ? "ok" : "warn"}">${S.grantConfirmed ? "مؤكدة" : "تحتاج تأكيدًا"}</span></div><p>${v}</p><div class="src">المصدر: ${s}</div></div>`).join("")}
+    </div>
+    ${S.grantConfirmed ? "" : '<div class="row"><button class="btn" id="g-confirm">تأكيد كل المستخرج</button></div>'}</section>
+    <section class="panel">
+      <div class="row between"><h2>آخر موعد للتقديم</h2>${S.deadline.resolved ? '<span class="chip ok">حُسم</span>' : '<span class="chip bad">متعارض</span>'}</div>
+      ${S.deadline.resolved ? `<p>${S.deadline.resolved}</p><div class="src">قرار المستخدم بناءً على المصدر</div>` : `
+        <p class="muted">مصدران يذكران موعدين مختلفين. لا نعتمد الأحدث تلقائيًا؛ اختر القيمة الصحيحة بناءً على تأكيد من الجهة.</p>
+        ${S.deadline.options.map(([v, s], i) => `<div class="option"><b>${v}</b><div class="src">المصدر: ${s}</div><div><button class="btn small sec" data-deadline="${i}">اعتماد هذه القيمة</button></div></div>`).join("")}`}
+    </section>
+    <section class="panel"><h2>أسئلة نموذج الجهة</h2><div class="list">
+      ${S.answers.map((a, i) => `<div class="item"><b>${i + 1}. ${a.q}</b><div class="row"><span class="chip bad">إلزامي</span><span class="chip neutral">الحد ${a.limit} ${a.type === "words" ? "كلمة" : "حرف"}</span></div></div>`).join("")}
+    </div></section>
+    <div class="row"><button class="btn" data-go="eligibility">التالي: الأهلية</button></div>`,
+
+  eligibility: () => {
+    const rs = requirements();
+    const groups = [...new Set(rs.map((r) => r.cat))];
+    return `
+    <div class="head"><h1>الأهلية والمتطلبات</h1><p>لكل شرط: النص، النتيجة، دليل الجمعية، والإجراء التالي. الشروط المالية تُحسب من الميزانية مباشرة.</p></div>
+    ${groups.map((g) => `<section class="panel"><h2>${g}</h2><div class="list">
+      ${rs.filter((r) => r.cat === g).map((r) => `
+        <div class="item">
+          <div class="row between"><b>${r.text}</b><span class="chip ${RES[r.res][1]}">${RES[r.res][0]}</span></div>
+          <div class="muted">${esc(r.ev)}</div>
+          ${r.id === "r2" && r.res !== "MET" ? '<div class="notice gold">حدد منطقة التنفيذ في لوحة «ملخص الطلب» ثم اضغط «حفظ وتحليل الأثر».</div>' : ""}
+          ${(r.id === "r3" || r.id === "r4") && r.res !== "MET" ? `<div class="row"><input type="text" id="ev-${r.id}" placeholder="الدليل، مثال: برنامج «مهارتي» منذ 2022" aria-label="الدليل"><button class="btn small" data-manual="${r.id}">مستوفى مع هذا الدليل</button></div>` : ""}
+          ${(r.id === "m2" || r.id === "m3") && r.res !== "MET" ? `<div class="row"><button class="btn small sec" data-doc="${r.id}">ارفع ملف المثال</button></div>` : ""}
+        </div>`).join("")}
+    </div></section>`).join("")}
+    <div class="row"><button class="btn" data-go="idea">التالي: طوّر الفكرة</button></div>`;
+  },
+
+  idea: () => `
+    <div class="head"><h1>طوّر فكرة المشروع</h1><p>أسئلة قصيرة على دفعات، وإدخال منظم بجانب المحادثة. لا نقترح مشروعًا خارج اختصاص الجمعية لمجرد توفر التمويل.</p></div>
+    <section class="panel">
+      <div class="chat">
+        <div class="bubble ai">لنبدأ: ما المشكلة التي يعالجها المشروع؟ وما دليل الحاجة ومصدره؟ ومن المستفيدون وكم عددهم تقريبًا؟</div>
+        ${S.idea.asked ? `<div class="bubble me">فجوة المهارات الرقمية لدى الشباب الباحثين عن عمل في الرياض. الدليل: استبيان الجمعية 2025. نحو 150 شابًا.</div>
+        <div class="bubble ai">بناءً على ملف الجمعية ومحاور المنحة، هذه ثلاثة مسارات. الأول الأقرب لخبرتكم.</div>` : ""}
+      </div>
+      ${S.idea.asked ? "" : '<div class="row"><button class="btn" id="i-ask">أرسل إجابات المثال واسأل المساعد</button></div>'}
+    </section>
+    ${S.idea.asked ? `<section class="panel"><h2>مسارات مقترحة</h2>
+      ${[["«جاهز رقميًا»: تمكين 150 شابًا بالمهارات الرقمية والتهيئة لسوق العمل", "يبني على «مهارتي» منذ 2022، ويقع في محورين من محاور المنحة.", "العدد 150 تقديري · يحتاج دليل حاجة موثقًا"],
+         ["مسار رقمي داخل برنامج «سواعد» التطوعي", "يستفيد من 25 متطوعًا نشطًا، محور العمل التطوعي.", "استمرار المتطوعين طوال المشروع"],
+         ["حاضنة مشاريع رقمية صغيرة", "تتصل بمحور سوق العمل لكنها أبعد عن خبرة الجمعية.", "⚠ خارج الاختصاص الحالي — تحتاج شريكًا متخصصًا"]]
+        .map(([t, r, a], i) => `<div class="option ${S.idea.picked === i ? "picked" : ""}"><b>${t}</b><p class="muted">${r}</p><p class="muted">الافتراضات: ${a}</p><div><button class="btn small sec" data-pick="${i}">استخدم هذا المسار</button></div></div>`).join("")}
+    </section>` : ""}
+    ${S.idea.picked !== null ? `<section class="panel"><h2>ملخص الفكرة</h2>
+      <textarea id="i-sum" rows="4" aria-label="ملخص الفكرة">${esc(S.idea.summary)}</textarea>
+      <div class="row"><button class="btn" id="i-approve">${S.idea.approved ? "معتمد ✓" : "اعتماد الملخص"}</button><span class="muted">الأعداد والمدة تقديرية حتى تعتمدها.</span></div></section>` : ""}
+    ${S.idea.approved ? '<div class="row"><button class="btn" data-go="project">التالي: محرر المشروع</button></div>' : ""}`,
+
+  project: () => `
+    <div class="head"><h1>محرر المشروع</h1><p>مسودة أعدها المساعد من الفكرة المعتمدة. عدّل ثم اعتمد كل قسم. الأقسام التي تحتوي «يحتاج استكمال» لا تُعتمد.</p></div>
+    ${!S.idea.approved ? '<div class="notice warn">اعتمد ملخص الفكرة أولًا. <a href="#idea">اذهب إلى الفكرة</a></div>' : ""}
+    ${S.sections.map((s, i) => `<section class="panel">
+      <div class="row between"><h2>${s.label}</h2><div class="row">${s.status === "APPROVED" ? '<span class="chip ok">معتمد</span>' : s.status === "REVIEW" ? '<span class="chip bad">يحتاج مراجعة</span>' : '<span class="chip warn">مسودة</span>'}${s.est && s.status !== "APPROVED" ? '<span class="chip gold">تقديري يحتاج اعتمادًا</span>' : ""}</div></div>
+      <textarea rows="4" data-sec="${i}" aria-label="${s.label}">${esc(s.text)}</textarea>
+      ${s.status !== "APPROVED" ? `<div class="row"><button class="btn small" data-approve-sec="${i}" ${/\[يحتاج استكمال/.test(s.text) || !S.idea.approved ? "disabled" : ""}>اعتماد القسم</button>${/\[يحتاج استكمال/.test(s.text) ? '<span class="muted">استبدل موضع «يحتاج استكمال» بدليل الحاجة ومصدره.</span>' : ""}</div>` : ""}
+    </section>`).join("")}
+    <div class="row"><button class="btn" data-go="budget">التالي: الميزانية</button></div>`,
+
+  budget: () => {
+    const b = budget();
+    return `
+    <div class="head"><h1>راجع الميزانية</h1><p>عدّل الكمية أو التكلفة أو المصدر وستُعاد الحسابات فورًا. الإجمالي = الكمية × تكلفة الوحدة، وللبنود الدورية × عدد الفترات.</p></div>
+    ${S.proposals.length ? `<section class="panel"><h2>مقترحات تعديل بانتظار موافقتك (${S.proposals.length})</h2>
+      ${S.proposals.map((p, i) => `<div class="option"><b>${p.kind === "sec" ? "قسم" : "إجابة"}: ${esc(p.label)}</b><div class="diff">${diffWords(p.before, p.after)}</div><div class="row"><button class="btn small" data-apply="${i}">تطبيق</button><button class="btn small sec" data-reject="${i}">رفض</button></div></div>`).join("")}</section>` : ""}
+    <div class="kpis">
+      <div class="kpi"><span>إجمالي المشروع</span><b class="tab">${sar(b.total)}</b></div>
+      <div class="kpi"><span>المطلوب من المانح</span><b class="tab">${sar(b.donor)}</b></div>
+      <div class="kpi"><span>المساهمة الذاتية</span><b class="tab">${sar(b.self)}</b></div>
+      <div class="kpi"><span>مساهمة الشركاء (عيني)</span><b class="tab">${sar(b.partner)}</b></div>
+    </div>
+    <section class="panel">
+      <div class="row">
+        ${requirements().filter((r) => r.cat === "اشتراطات مالية").map((r) => `<span class="chip ${RES[r.res][1]}">${RES[r.res][0]}: ${r.text}</span>`).join("")}
+      </div>
+      <div class="tablebox"><table>
+        <thead><tr><th>البند</th><th>الكمية</th><th>تكلفة الوحدة (ر.س)</th><th>الفترات</th><th class="num">الإجمالي</th><th>المصدر</th><th>الحالة</th></tr></thead>
+        <tbody>${S.lines.map((l, i) => `<tr class="${isExcluded(l) ? "excluded" : ""}">
+          <td><b>${esc(l.item)}</b><div class="muted">${l.cc}${l.followB ? " · يتبع عدد المستفيدين" : ""}${l.followD ? " · يتبع المدة" : ""}</div>${isExcluded(l) ? '<div style="color:var(--bad);font-size:.8rem">بند مستبعد في شروط المنحة إذا موّله المانح</div>' : ""}</td>
+          <td><input type="number" min="0" value="${l.qty}" data-qty="${i}" aria-label="الكمية" class="tab" style="width:80px" ${l.followB ? "disabled" : ""}></td>
+          <td><input type="number" min="0" step="0.01" value="${(l.unit / 100).toFixed(2)}" data-unit="${i}" aria-label="تكلفة الوحدة" class="tab" style="width:110px"></td>
+          <td class="tab">${l.calc === "rec" ? l.periods : "—"}</td>
+          <td class="num"><b>${sar(lineTotal(l))}</b></td>
+          <td><select data-src="${i}" aria-label="المصدر">${[["DONOR", "المانح"], ["SELF", "الجمعية"], ["PARTNER", "شريك (عيني)"]].map(([v, t]) => `<option value="${v}" ${l.src === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>
+          <td>${l.est ? '<span class="chip gold">تقديري</span>' : '<span class="chip ok">معتمد</span>'}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>
+      <div class="row between"><span class="muted tab">المساهمة غير المانحة ${b.share.toFixed(2)}% — العيني يُحتسب في الإجمالي ولا يُخصم من النقدي. لا ضريبة أو مصاريف إدارية تُضاف تلقائيًا.</span>
+      ${S.lines.some((l) => l.est) ? '<button class="btn small" id="b-approve">اعتماد كل البنود بعد مراجعتها</button>' : ""}</div>
+    </section>
+    <div class="row"><button class="btn" data-go="answers">التالي: إجابات الجهة</button></div>`;
+  },
+
+  answers: () => `
+    <div class="head"><h1>إجابات نموذج الجهة</h1><p>الحدود تُفحص أثناء الكتابة. طريقة العد معلنة وقد تختلف عن بوابة الجهة.</p></div>
+    ${S.answers.map((a, i) => {
+      const n = a.type === "words" ? words(a.text) : chars(a.text);
+      return `<section class="panel">
+        <div class="row between"><h2>${i + 1}. ${a.q}</h2><div class="row">${a.stale ? '<span class="chip bad">قديمة بعد تعديل المشروع</span>' : a.approved ? '<span class="chip ok">معتمدة</span>' : '<span class="chip warn">مسودة</span>'}</div></div>
+        <textarea rows="4" data-ans="${i}" aria-label="${a.q}">${esc(a.text)}</textarea>
+        <div class="row between"><span class="tab" id="cnt-${i}" style="color:${n > a.limit ? "var(--bad)" : "var(--muted)"}">${n} / ${a.limit} ${a.type === "words" ? "كلمة" : "حرف"}${n > a.limit ? " — يتجاوز الحد" : ""}</span>
+        ${!a.approved || a.stale ? `<button class="btn small" data-approve-ans="${i}" ${n > a.limit ? "disabled" : ""}>اعتماد الإجابة</button>` : ""}</div>
+      </section>`;
+    }).join("")}
+    <div class="row"><button class="btn" data-go="readiness">التالي: الجاهزية</button></div>`,
+
+  readiness: () => {
+    const r = readiness();
+    return `
+    <div class="head"><h1>تحقق من جاهزية الطلب</h1><p>نسبة الاكتمال تقيس المتطلبات المعروفة فقط، وتبقى العوائق ظاهرة حتى لو ارتفعت النسبة.</p></div>
+    <section class="panel">
+      <div class="row between"><h2 style="color:${r.blockers.length ? "var(--warn)" : "var(--ok)"}">${r.blockers.length ? "مسودة — توجد عوائق" : "جاهز للتقديم"}</h2><span class="tab">${r.pct}%</span></div>
+      <div class="meter"><i style="width:${r.pct}%"></i></div>
+      <p class="muted tab">نسبة الاكتمال = ${r.ok} متطلبًا مستوفى ÷ ${r.total} متطلبًا معروفًا. ليست نسبة قبول ولا تقديرًا لفرص الفوز.</p>
+    </section>
+    ${r.blockers.length ? `<section class="panel"><h2>العوائق (${r.blockers.length})</h2><div class="list">
+      ${r.blockers.map((b) => `<div class="item"><div class="row between"><b>${esc(b.label)}</b><a href="#${b.go}">معالجة</a></div><div class="muted">${esc(b.msg)}</div></div>`).join("")}</div></section>` : ""}
+    <section class="panel">
+      <h2>اعتماد نسخة</h2>
+      <p class="muted">الاعتماد يحفظ لقطة ثابتة من الطلب. كل ملفات التصدير تُنشأ منها، والتعديلات اللاحقة لا تغيّرها.</p>
+      ${S.approvedVersion ? `<div class="notice ${S.approvedVersion.ready ? "ok" : "warn"}">اعتُمدت النسخة رقم ${S.approvedVersion.n} ${S.approvedVersion.ready ? "وهي جاهزة للتقديم" : "(مسودة — توجد عوائق)"}.${S.approvedVersion.outdated ? " تغيّر الطلب بعدها؛ اعتمد نسخة جديدة لتضمين التعديلات." : ""}</div>` : ""}
+      <div class="row"><button class="btn" id="r-approve">اعتماد نسخة من الحالة الحالية</button><button class="btn sec" data-go="export">إلى التصدير</button></div>
+    </section>`;
+  },
+
+  export: () => {
+    const r = readiness();
+    const v = S.approvedVersion;
+    const draft = !v || !v.ready || !S.paid;
+    const b = budget();
+    return `
+    <div class="head"><h1>صدّر حزمة التقديم</h1><p>كل الصيغ تُنشأ من نسخة معتمدة واحدة، وتحمل رقمها وتاريخ التصدير، وتُوسم «مسودة» إذا لم تكتمل الجاهزية أو قبل شراء الحزمة.</p></div>
+    ${!v ? '<div class="notice warn">لا توجد نسخة معتمدة بعد. <a href="#readiness">اعتمد نسخة</a></div>' : ""}
+    <section class="panel">
+      <div class="row between"><h2>الشراء (محاكاة)</h2>${S.paid ? '<span class="chip ok">مدفوع — محاكاة</span>' : '<span class="chip warn">غير مدفوع</span>'}</div>
+      <p class="muted">حزمة طلب دعم: 1,490 ر.س (سعر تجريبي) — مشروع واحد لدى جهة واحدة، التصدير النهائي بلا وسم مسودة. لا عمولة على قيمة المنحة.</p>
+      ${S.paid ? "" : '<div class="row"><button class="btn gold" id="x-pay">محاكاة دفع ناجح — لا يتم تحصيل مبلغ</button></div>'}
+    </section>
+    <section class="panel">
+      <h2>معاينة وثيقة المشروع ${v ? `— النسخة ${v.n}` : ""}</h2>
+      <div class="doc">
+        ${draft ? '<div class="stamp">مسودة</div>' : ""}
+        <div class="mini-logo">أثر</div>
+        <small>جمعية أثر للتنمية المجتمعية</small>
+        <div style="font-family:var(--display);font-size:1.3rem;color:#0f3d2e;font-weight:800">مشروع «جاهز رقميًا»</div>
+        <small>مقدم إلى: صندوق الأثر التجريبي للتنمية — منحة تمكين المجتمع</small><br>
+        <small>${v ? `النسخة رقم ${v.n} — ` : ""}بيانات تجريبية غير حقيقية${draft ? (r.blockers.length ? ` — مسودة: ${r.blockers.length} عوائق` : " — مسودة: قبل الشراء") : ""}</small>
+        <h4>${S.sections[0].label}</h4><p style="font-size:.9rem">${esc(S.sections[0].text)}</p>
+        <h4>ملخص الميزانية</h4>
+        <p style="font-size:.9rem" class="tab">الإجمالي ${sar(b.total)} · المطلوب من المانح ${sar(b.donor)} · المساهمة الذاتية ${sar(b.self)}</p>
+      </div>
+    </section>
+    <section class="panel"><h2>الملفات التي يُنشئها التطبيق</h2>
+      <div class="files">
+        ${[["PDF", "وثيقة المشروع"], ["DOCX", "وثيقة المشروع لـ Word"], ["XLSX", "الميزانية بصيغ حقيقية"], ["TXT", "إجابات النموذج"], ["PDF", "قائمة المتطلبات والمرفقات"], ["PDF", "ملخص تنفيذي صفحة واحدة"], ["ZIP", "الحزمة كاملة"]]
+          .map(([f, d]) => `<div class="file"><b class="ltr">${f}</b><span>${d}</span><span class="chip ${draft ? "warn" : "ok"}" style="justify-self:start">${draft ? "مسودة" : "نهائي"}</span></div>`).join("")}
+      </div>
+      <p class="muted">في هذا العرض نعرض المعاينة فقط؛ تنزيل الملفات الفعلية متاح في التطبيق الكامل.</p>
+    </section>`;
+  },
+};
+
+function diffWords(a, b) {
+  const A = a.split(/(\s+)/), B = b.split(/(\s+)/);
+  let out = "";
+  const n = Math.max(A.length, B.length);
+  for (let i = 0; i < n; i++) {
+    if (A[i] === B[i]) out += esc(A[i] ?? "");
+    else out += (A[i] ? `<del>${esc(A[i])}</del>` : "") + (B[i] ? `<ins>${esc(B[i])}</ins>` : "");
+  }
+  return `<p style="white-space:pre-wrap">${out}</p>`;
+}
+
+// ===== الأحداث =====
+function bind(cur) {
+  document.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
+  document.querySelectorAll("[data-confirm]").forEach((b) => (b.onclick = () => { S.facts[+b.dataset.confirm].status = "CONFIRMED"; render(); }));
+  const gc = $("#g-confirm"); if (gc) gc.onclick = () => { S.grantConfirmed = true; render(); };
+  document.querySelectorAll("[data-deadline]").forEach((b) => (b.onclick = () => { S.deadline.resolved = S.deadline.options[+b.dataset.deadline][0]; render(); }));
+  document.querySelectorAll("[data-manual]").forEach((b) => (b.onclick = () => {
+    const id = b.dataset.manual; const ev = $("#ev-" + id).value.trim();
+    if (!ev) { $("#ev-" + id).focus(); $("#ev-" + id).placeholder = "أضف الدليل أولًا — الاستيفاء دون دليل لا يُقبل"; return; }
+    S.manual[id === "r3" ? "exp" : "fit"] = ev; render();
+  }));
+  document.querySelectorAll("[data-doc]").forEach((b) => (b.onclick = () => { S.docs[b.dataset.doc === "m2" ? "financials" : "pledge"] = true; render(); }));
+  const ia = $("#i-ask"); if (ia) ia.onclick = () => { S.idea.asked = true; render(); };
+  document.querySelectorAll("[data-pick]").forEach((b) => (b.onclick = () => {
+    const i = +b.dataset.pick; S.idea.picked = i; S.idea.approved = false;
+    S.idea.summary = i === 0 ? "مشروع «جاهز رقميًا» يمكّن 150 شابًا وشابة في منطقة الرياض خلال 12 شهرًا من المهارات الرقمية والتهيئة لسوق العمل، بناءً على خبرة الجمعية في «مهارتي». الأعداد تقديرية." : i === 1 ? "مسار مهارات رقمية داخل برنامج «سواعد» التطوعي." : "حاضنة مشاريع رقمية صغيرة للشباب (تحتاج شريكًا متخصصًا).";
+    render();
+  }));
+  const isum = $("#i-sum"); if (isum) isum.oninput = () => { S.idea.summary = isum.value; S.idea.approved = false; };
+  const iap = $("#i-approve"); if (iap) iap.onclick = () => { if (S.idea.summary.trim().length > 20) { S.idea.approved = true; render(); } };
+  document.querySelectorAll("[data-sec]").forEach((t) => (t.oninput = () => {
+    const s = S.sections[+t.dataset.sec]; s.text = t.value; if (s.status === "APPROVED") s.status = "DRAFT";
+    S.answers.forEach((a) => { if (a.approved) { a.stale = true; a.approved = false; } });
+    const btn = document.querySelector(`[data-approve-sec="${t.dataset.sec}"]`); if (btn) btn.disabled = /\[يحتاج استكمال/.test(s.text) || !S.idea.approved;
+    renderSide();
+  }));
+  document.querySelectorAll("[data-approve-sec]").forEach((b) => (b.onclick = () => { const s = S.sections[+b.dataset.approveSec]; s.status = "APPROVED"; s.est = false; render(); }));
+  document.querySelectorAll("[data-qty]").forEach((x) => (x.onchange = () => { const l = S.lines[+x.dataset.qty]; l.qty = Math.max(0, Math.round(+x.value || 0)); l.est = true; render(); }));
+  document.querySelectorAll("[data-unit]").forEach((x) => (x.onchange = () => { const l = S.lines[+x.dataset.unit]; l.unit = Math.max(0, Math.round((+x.value || 0) * 100)); l.est = true; render(); }));
+  document.querySelectorAll("[data-src]").forEach((x) => (x.onchange = () => { const l = S.lines[+x.dataset.src]; l.src = x.value; l.kind = x.value === "PARTNER" ? "IN_KIND" : "CASH"; render(); }));
+  const ba = $("#b-approve"); if (ba) ba.onclick = () => { S.lines.forEach((l) => (l.est = false)); render(); };
+  document.querySelectorAll("[data-apply]").forEach((b) => (b.onclick = () => {
+    const p = S.proposals.splice(+b.dataset.apply, 1)[0];
+    if (p.kind === "sec") { const s = S.sections.find((x) => x.key === p.key); s.text = p.after; s.status = "DRAFT"; }
+    else { const a = S.answers[p.key]; a.text = p.after; a.stale = false; a.approved = false; }
+    render();
+  }));
+  document.querySelectorAll("[data-reject]").forEach((b) => (b.onclick = () => { S.proposals.splice(+b.dataset.reject, 1); render(); }));
+  document.querySelectorAll("[data-ans]").forEach((t) => (t.oninput = () => {
+    const i = +t.dataset.ans, a = S.answers[i]; a.text = t.value; a.approved = false;
+    const n = a.type === "words" ? words(a.text) : chars(a.text);
+    const c = $("#cnt-" + i); c.textContent = `${n} / ${a.limit} ${a.type === "words" ? "كلمة" : "حرف"}${n > a.limit ? " — يتجاوز الحد" : ""}`; c.style.color = n > a.limit ? "var(--bad)" : "var(--muted)";
+    const btn = document.querySelector(`[data-approve-ans="${i}"]`); if (btn) btn.disabled = n > a.limit;
+  }));
+  document.querySelectorAll("[data-approve-ans]").forEach((b) => (b.onclick = () => { const a = S.answers[+b.dataset.approveAns]; a.approved = true; a.stale = false; render(); }));
+  const ra = $("#r-approve"); if (ra) ra.onclick = () => { S.approvedVersion = { n: (S.approvedVersion?.n ?? 0) + 1, ready: readiness().blockers.length === 0, outdated: false }; render(); };
+  const xp = $("#x-pay"); if (xp) xp.onclick = () => { S.paid = true; render(); };
+}
+
+render();
+</script>
+</body>
+</html>
