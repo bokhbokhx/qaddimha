@@ -6,6 +6,8 @@
 > هذه نسخة أولى عملية تعمل من البداية للنهاية. الأسعار والجمعية والمنحة المضمّنة **تجريبية وغير حقيقية**.
 > للتفاصيل: [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) و[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md).
 
+> **العرض التفاعلي مع المستشار الصوتي (Gemini Live):** موقع مستقل في مجلد [`demo/`](./demo/README.md) — انشره على Vercel باختيار `demo` كمجلد جذر.
+
 ## أسهل طريقة للتجربة: GitHub Codespaces (من المتصفح، بلا تثبيت)
 
 1. افتح صفحة المستودع على GitHub ← زر **Code** ← تبويب **Codespaces** ← **Create codespace on main**.
