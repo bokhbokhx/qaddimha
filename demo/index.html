@@ -145,6 +145,12 @@ textarea { resize: vertical; line-height: 1.9; }
 .mic-sm { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; cursor: pointer; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; }
 .mic-sm svg { width: 20px; height: 20px; }
 .mic-sm.listening { background: var(--gold); color: #1c2b25; animation: pulse 1.2s infinite; }
+.why { font-size: .78rem; color: var(--muted); border-inline-start: 2px solid var(--gold); padding-inline-start: 8px; max-width: 94%; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.quick button { border: 1px solid var(--brand-2); background: var(--surface); color: var(--brand); border-radius: 12px; padding: 4px 10px; font-size: .82rem; cursor: pointer; text-align: start; }
+.quick button:hover { background: var(--brand-soft); }
+.expert { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.expert span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: .8rem; color: var(--muted); }
 .suggest { display: flex; flex-wrap: wrap; gap: 6px; }
 .suggest button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 2px 10px; font-size: .78rem; cursor: pointer; color: var(--ink); text-align: start; }
 
@@ -227,7 +233,7 @@ footer { color: var(--muted); font-size: .8rem; padding-block: 0 32px; }
 
 <button type="button" class="fab" id="fab" aria-label="المساعد الصوتي" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="badge tab" id="unread" hidden></span></button>
 <section class="drawer" id="drawer" hidden aria-label="محادثة المساعد">
-  <header><h2>مساعد قدمها</h2><div class="row"><button type="button" class="btn ghost small" id="tts-toggle" aria-pressed="false">🔈 قراءة الردود</button><button type="button" class="btn ghost small" id="close-drawer" aria-label="إغلاق">✕</button></div></header>
+  <header><h2>مستشار المنح</h2><div class="row"><button type="button" class="btn ghost small" id="conv-toggle" aria-pressed="false">🎧 محادثة صوتية</button><button type="button" class="btn ghost small" id="tts-toggle" aria-pressed="false">🔈 قراءة الردود</button><button type="button" class="btn ghost small" id="close-drawer" aria-label="إغلاق">✕</button></div></header>
   <div class="convo" id="convo"></div>
   <div class="composer">
     <div class="suggest" id="suggest"></div>
@@ -510,7 +516,7 @@ function renderSide() {
     <section class="panel">
       <h3>ما الحقيقي في هذا العرض</h3>
       <div class="status-list">
-        <div><span>فهم كلامك وكتابة المسودات</span>${CAP.ai === "real" ? chip("ok", "حقيقي عبر Claude") : CAP.ai === "checking" ? chip("neutral", "جارٍ التحقق") : chip("warn", "محاكاة بقواعد")}</div>
+        <div><span>المستشار الذكي (فهم، أسئلة، صياغة)</span>${CAP.ai === "real" ? chip("ok", "حقيقي عبر Claude") : CAP.ai === "checking" ? chip("neutral", "جارٍ التحقق") : chip("warn", "محاكاة بقواعد")}</div>
         <div><span>الاستماع للصوت</span>${CAP.voice === "real" ? chip("ok", "حقيقي (متصفحك)") : CAP.voice === "sim" ? chip("warn", "محاكاة") : chip("neutral", "يتحدد عند أول ضغطة")}</div>
         <div><span>قراءة الردود بصوت</span>${CAP.tts ? chip("ok", "حقيقي إن توفر صوت عربي") : chip("warn", "غير متاح")}</div>
         <div><span>قراءة ملفات TXT</span>${chip("ok", "حقيقي")}</div>
@@ -668,11 +674,13 @@ async function generateDraft(btn) {
   go("project");
   openDrawer(true);
   addAI(`${note}جهزتُ المسودة ${source === "ai" ? "(كتبها Claude من مصادرك)" : "(معدّة للعرض)"}: وصف المشروع، المشكلة، الأهداف، ${S.activities.length} أنشطة، ${S.indicators.length} مؤشرات، ${S.lines.length} بنود ميزانية، وإجابات أسئلة المنحة.\nما يحتاجك فقط: ${S.draftMissing.join("، ") || "لا شيء"}.\nعدّل مباشرة، أو قل لي ما تريد بالصوت أو الكتابة.`);
+  askNext();
 }
 
 function orgSummary() { return ORG_FIELDS.map(([k, l]) => S.org[k]?.value ? `- ${l}: ${S.org[k].value} [${PROV[S.org[k].prov]?.[1] || ""}]` : `- ${l}: غير معروف`).join("\n"); }
 function draftPrompt() {
-  return `أنت مساعد في منصة «قدمها» لتجهيز طلبات المنح للجمعيات غير الربحية في السعودية. اكتب مسودة مشروع كاملة بالعربية.
+  return `أنت مستشار منح في منصة «قدمها» لتجهيز طلبات المنح للجمعيات غير الربحية في السعودية. اكتب مسودة مشروع كاملة بالعربية بلغة مهنية يقرؤها المقيّم بسرعة.
+${KNOWLEDGE}
 قواعد ملزمة: لا تختلق إنجازات أو أرقامًا عن الجمعية أو شراكات قائمة أو إحصاءات. أي معلومة غير متوفرة اكتب مكانها [يحتاج استكمال: ...] وأضفها إلى missing. الشركاء مقترحون فقط. لا تقترح مشروعًا خارج اختصاص الجمعية أو قدرتها. وائم المشروع مع أولويات المنحة دون تغيير حقيقته. لا تضع تكاليف مستبعدة على المانح. المبالغ بالريال.
 
 بيانات الجمعية:
@@ -697,8 +705,51 @@ ${GRANT.questions.map((q, i) => `${i}. ${q.q} (الحد ${q.limit} ${q.type === 
 act رقم النشاط (يبدأ من 0)، وcost تكلفة الوحدة بالريال، وfollowB=true للبنود التي كميتها = عدد المستفيدين، وfollowD=true للبنود الشهرية التي فتراتها = المدة. 5–7 أنشطة، 4–6 مؤشرات، 7–10 بنود.`;
 }
 
+// ---------- خبرة المستشار ----------
+const KNOWLEDGE = `خبرتك: مستشار منح متمرس في القطاع غير الربحي السعودي، تعرف عمل الجمعيات وما يبحث عنه المقيّمون.
+- الطلب القوي: حاجة موثقة بدليل (إحصاء رسمي، استبيان، قوائم انتظار، تقارير سابقة) ← أهداف SMART ← أنشطة ← مخرجات ← نتائج ← أثر (الإطار المنطقي ونظرية التغيير).
+- المؤشرات: لكل مؤشر خط أساس ومستهدف ومصدر تحقق وتوقيت؛ فرّق بين مؤشرات المخرجات (عدد المتدربين) والنتائج (تحسن المهارة، التوظيف).
+- الميزانية: كل بند مرتبط بنشاط ومبرر، تكلفة الوحدة واقعية، المساهمة الذاتية النقدية والعينية (قاعات، وقت الفريق، متطوعون) تُحتسب وتوثق، ولا بنود مستبعدة على المانح.
+- الاستدامة: مؤسسية (دمج في برامج الجمعية)، مالية (مصادر بديلة واقعية)، مجتمعية (متطوعون، خريجون).
+- القدرة التنفيذية: خبرة موثقة، فريق، حوكمة، قوائم مالية مدققة، شهادة تسجيل سارية لدى المركز الوطني لتنمية القطاع غير الربحي.
+- أنواع المانحين: مؤسسات مانحة أهلية، أوقاف، برامج مسؤولية اجتماعية للشركات، جهات حكومية؛ لكل منها أولويات ولغة، فاستخدم مصطلحات دليل المنحة نفسه.
+- أسباب رفض شائعة: حاجة بلا دليل، أهداف عامة غير قابلة للقياس، ميزانية مبالغ فيها أو منفصلة عن الأنشطة، تجاوز السقف، بنود مستبعدة، شراكات بلا إثبات، تجاوز حدود الكلمات.
+- المقيّم يقرأ بسرعة: ابدأ بالأرقام والنتيجة، وتجنب المبالغة والعبارات الإنشائية.
+لا تذكر شروط جهات مانحة حقيقية بعينها ولا أرقامًا عامة كحقائق ما لم تكن في المعطيات؛ قل «تحقق من دليل الجهة».`;
+
+// أسئلة المستشار: مرتبة بأثرها على التقييم والأهلية، ولكل سؤال سببه وإجابات مقترحة
+function gaps() {
+  const g = [], O = S.org, P = S.project, b = budget();
+  const add = (id, prio, q, why, quick) => g.push({ id, prio, q, why, quick });
+  if (!O.name?.value) add("org", 100, "عرّفني بجمعيتكم: ما اسمها، ونوعها، وفي أي منطقة تعملون؟", "أول ما يتحقق منه المانح أهليتكم: نوع الكيان ومنطقة العمل.", ["نحن جمعية أثر للتنمية المجتمعية، جمعية أهلية في الرياض، نشتغل مع الشباب", "عندي الملف التعريفي — سأرفعه"]);
+  if (!S.idea.seed && !P) add("idea", 95, "ما المشكلة التي تريدون حلها، ومن الفئة المتضررة منها؟", "المنح تموّل حلولًا لمشكلات محددة، لا أنشطة عامة. وضوح المشكلة يحدد كل ما بعدها.", ["الشباب في الرياض يحتاجون مهارات رقمية للتوظيف", "فكرتنا تدريب الشباب على المهارات الرقمية"]);
+  if (!S.params.beneficiaries && !P) add("scale", 90, "كم مستفيدًا تستهدفون، وما مدة المشروع التقريبية؟", "الحجم والمدة يحددان الميزانية، ويُقارنان بسقف المنحة (500 ألف) وأقصى مدة (12 شهرًا).", ["150 شاب خلال 12 شهر", "100 مستفيد خلال 9 أشهر"]);
+  if (!P && O.name?.value) add("draft", 85, "عندي ما يكفي لمسودة أولى كاملة. أكتبها الآن؟", "تراجع وتعدّل بدل الكتابة من الصفر، وأضع «يحتاج استكمال» مكان أي معلومة ناقصة.", ["نعم اكتب المسودة", "لا، عندي معلومات إضافية"]);
+  if (P && needsFill(P.problem)) add("need", 80, "ما الدليل على الحاجة؟ استبيان أجريتموه، إحصاءات رسمية، أو قوائم انتظار؟", "«وضوح الحاجة ودليلها» 25% من التقييم، والحاجة بلا رقم موثق من أكثر أسباب الرفض.", ["عندنا استبيان 2025 على 400 شاب في الرياض، 62% يحتاجون مهارات رقمية", "عندنا قائمة انتظار 230 شاب في برنامج مهارتي", "ما عندنا دليل موثق"]);
+  const ex = S.lines.filter(isExcluded);
+  if (ex.length) add("excl", 78, `بند «${ex[0].item}» غير مسموح تمويله من المانح. تتحمله الجمعية أم نحذفه؟`, "بند مستبعد واحد قد يُسقط الطلب في الفحص الأولي.", ["تتحمله الجمعية", "احذفه"]);
+  if (S.lines.length && b.share < GRANT.minShare) add("share", 76, "المساهمة الذاتية أقل من 10%. ما الذي تستطيع الجمعية تقديمه: قاعات، وقت فريق، متطوعون؟", "المساهمة شرط إلزامي، والعينية تُقبل إذا وُثقت.", ["نقدر نساهم بقاعاتنا التدريبية", "نساهم بوقت متطوعينا"]);
+  if (S.indicators.some((i) => i.type === "نتيجة" && !i.baseline)) add("baseline", 70, "مؤشرات النتائج بلا خط أساس. هل عندكم قياس سابق لمهارات المستفيدين، أم نقيسه في بداية المشروع؟", "«الأثر القابل للقياس» 30% من التقييم؛ وبلا خط أساس لا يمكن إثبات التحسن.", ["نقيسه باختبار قبلي في الشهر الأول", "عندنا نتائج اختبار من دفعة 2024"]);
+  if (!S.eligDecisions.exp && O.programs?.value) add("exp", 65, "شرط الخبرة سنتان: هل برنامج «مهارتي» منذ 2022 دليلكم؟ وهل لديكم تقرير يثبته؟", "الخبرة شرط إلزامي، والمقيّم يطلب دليلًا لا وصفًا.", ["نعم، عندنا خبرة من 2022 في برنامج مهارتي والتقرير السنوي متوفر"]);
+  if (P?.partners?.some((x) => x.status === "مقترح")) add("partner", 55, "الشراكة المقترحة لم يُتفق عليها بعد. هل تواصلتم مع الشريك؟", "الشراكة بلا خطاب اتفاق تُكتب «مخطط لها» فقط؛ ادعاؤها قائمة يضر بالمصداقية.", ["لم نتواصل بعد — اكتبها مخطط لها", "احذف الشراكة"]);
+  if (!S.deadline && S.sources.grant) add("deadline", 50, "دليل المنحة يذكر 31 يناير والتعميم يذكر 15 فبراير. هل أكدت لكم الجهة أي التاريخين؟", "لا نفترض الأحدث؛ تفويت الموعد ينهي الطلب.", ["اعتمد 31 يناير احتياطًا", "الجهة أكدت 15 فبراير"]);
+  const docsMissing = GRANT.docs.filter(([k]) => !S.docs[k]);
+  if (docsMissing.length && P) add("docs", 45, `باقي مرفقات إلزامية: ${docsMissing.map((d) => d[1]).join("، ")}. هل هي جاهزة لديكم؟`, "المرفقات الإلزامية تُفحص قبل قراءة المشروع.", ["جاهزة، سأرفعها"]);
+  return g.sort((x, y) => y.prio - x.prio);
+}
+function askNext() {
+  const g = gaps()[0];
+  if (g) addAI(g.q, { q: { q: g.q, why: g.why, quick: g.quick } });
+  else addAI("لا أسئلة متبقية لدي. راجع صفحة «المراجعة والتصدير» لاعتماد النسخة.");
+}
+function startInterview() {
+  openDrawer(true);
+  addAI("سأسألك أسئلة قصيرة، واحدًا تلو الآخر، بترتيب ما يهم المقيّمين أكثر، وأشرح لماذا أسأل. أجب بالصوت أو الكتابة أو اضغط إجابة مقترحة.");
+  askNext();
+}
+
 // ---------- المساعد: محادثة صوتية ونصية ----------
-let unread = 0, drawerOpen = false, listening = false, rec = null, ttsOn = false, busy = false, simIdx = {};
+let convMode = false, unread = 0, drawerOpen = false, listening = false, rec = null, ttsOn = false, busy = false, simIdx = {};
 function openDrawer(open = true) {
   drawerOpen = open;
   $("#drawer").hidden = !open;
@@ -706,7 +757,7 @@ function openDrawer(open = true) {
   if (open) { unread = 0; renderConvo(); }
   const u = $("#unread"); u.hidden = !unread; u.textContent = unread;
 }
-function addAI(text, extra = null) { S.chat.push({ role: "ai", text, extra }); if (ttsOn) speak(text); if (drawerOpen) renderConvo(); else { unread++; openDrawer(false); } save(); }
+function addAI(text, extra = null) { S.chat.push({ role: "ai", text, extra }); if (ttsOn) speak(text, () => { if (convMode && extra?.q && CAP.voice === "real" && !listening && !busy) micPress(); }); if (drawerOpen) renderConvo(); else { unread++; openDrawer(false); } save(); }
 function addMe(text, via) { S.chat.push({ role: "me", text, via }); renderConvo(); save(); }
 function renderConvo() {
   const c = $("#convo");
@@ -714,7 +765,8 @@ function renderConvo() {
   c.innerHTML = S.chat.slice(start).map((m, k) => {
     const idx = start + k;
     if (m.role === "me") return `<div class="bubble me"><span class="tag">${m.via === "voice" ? "بالصوت" : m.via === "sim" ? "بالصوت (محاكاة)" : "كتابة"}</span>${esc(m.text)}</div>`;
-    let html = `<div class="bubble ai">${esc(m.text)}</div>`;
+    let html = `<div class="bubble ai">${m.extra?.q ? "❓ " : ""}${esc(m.text)}</div>`;
+    if (m.extra?.q) html += `<div class="why">لماذا أسأل: ${esc(m.extra.q.why)}</div>` + (idx === S.chat.length - 1 && m.extra.q.quick?.length ? `<div class="quick">${m.extra.q.quick.map((s) => `<button type="button" data-say="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : "");
     if (m.extra?.actions?.length && !m.extra.done) {
       html += `<div class="understood"><b>ما فهمته — راجعه قبل التطبيق:</b>${m.extra.actions.map((a, j) => `<label><input type="checkbox" checked data-act="${j}"> <span>${esc(describeAction(a))}</span></label>`).join("")}<div class="row"><button class="btn small" data-apply-u="${idx}">طبّق المحدد</button><button class="btn small sec" data-fix-u="${idx}">صحّح كلامي</button></div></div>`;
     } else if (m.extra?.done) html += `<div class="muted">✓ ${esc(m.extra.done)}</div>`;
@@ -728,6 +780,7 @@ function renderConvo() {
     const res = applyActions(chosen);
     m.extra.done = res.length ? "طُبّق: " + res.join(" · ") : "لم يُطبّق شيء";
     render();
+    if (!chosen.some((a) => a.type === "generate_draft")) askNext();
   }));
   c.querySelectorAll("[data-fix-u]").forEach((b) => (b.onclick = () => {
     const i = +b.dataset.fixU;
@@ -737,10 +790,11 @@ function renderConvo() {
     renderConvo(); $("#msg").focus();
   }));
   $("#suggest").innerHTML = suggestionsFor(route()).map((s) => `<button type="button" data-say="${esc(s)}">${esc(s)}</button>`).join("");
+  c.querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => handleInput(b.dataset.say, "text")));
   $("#suggest").querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => handleInput(b.dataset.say, "text")));
 }
 function renderModeLine() {
-  $("#mode-line").textContent = `الصوت: ${CAP.voice === "real" ? "استماع حقيقي من متصفحك" : CAP.voice === "sim" ? "محاكاة — الميكروفون غير متاح هنا، يُشغَّل كلام مثال" : "يتحدد عند أول ضغطة"} · الفهم: ${CAP.ai === "real" ? "حقيقي عبر Claude" : CAP.ai === "checking" ? "جارٍ التحقق" : "قواعد محاكاة"}`;
+  $("#mode-line").textContent = `الصوت: ${CAP.voice === "real" ? "استماع حقيقي من متصفحك" : CAP.voice === "sim" ? "محاكاة — الميكروفون غير متاح هنا، يُشغَّل كلام مثال" : "يتحدد عند أول ضغطة"} · المستشار: ${CAP.ai === "real" ? "Claude — حقيقي" : CAP.ai === "checking" ? "جارٍ التحقق" : "قواعد محاكاة"}`;
 }
 
 const SIM_SCRIPT = {
@@ -831,13 +885,13 @@ function simulateUtterance() {
     if (k >= w.length) { clearInterval(t); listening = false; setMicUI(false, ""); handleInput(text, "sim"); }
   }, 80);
 }
-function speak(text) {
+function speak(text, after) {
   try {
-    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text.slice(0, 400));
     u.lang = "ar-SA";
     const v = speechSynthesis.getVoices().find((x) => /^ar/i.test(x.lang));
     if (v) u.voice = v;
+    if (after) u.onend = after;
     speechSynthesis.speak(u);
   } catch {}
 }
@@ -865,6 +919,11 @@ async function handleInput(text, via) {
   S.chat.splice(S.chat.indexOf(thinking), 1);
   const actions = (Array.isArray(out.actions) ? out.actions : []).filter(validAction);
   addAI(String(out.reply || "تم."), actions.length ? { actions } : null);
+  const aq = out.question;
+  if (!actions.length && aq && typeof aq.q === "string" && aq.q.trim()) {
+    const q = { q: aq.q.trim(), why: String(aq.why || ""), quick: (Array.isArray(aq.quick) ? aq.quick : []).filter((x) => typeof x === "string" && x.trim()).slice(0, 4).map((x) => x.slice(0, 140)) };
+    addAI(q.q, { q });
+  }
   if (out.go && STEPS.some((s) => s[0] === out.go) && !actions.length && out.go !== route()) go(out.go);
   if (via !== "text") renderSide();
   if (route() === "sources") render();
@@ -881,7 +940,12 @@ ${S.project ? Object.entries(SECTION_LABEL).map(([k, l]) => `${l} [${k}]: ${S.pr
 }
 async function understandAI(text) {
   const recent = S.chat.filter((m) => m.text !== "أفكر…").slice(-8).map((m) => `${m.role === "me" ? "المستخدم" : "المساعد"}: ${m.text}`).join("\n");
-  const prompt = `أنت مساعد صوتي في منصة «قدمها» يساعد جمعية سعودية على تجهيز طلب منحة. حوّل كلام المستخدم (قد يكون عاميًا ومنقولًا من الصوت) إلى إجراءات منظمة على الملف، وأجب باختصار بالعربية (جملتان أو ثلاث).
+  const gapList = gaps().slice(0, 5).map((g) => `- [${g.id}] ${g.q} (السبب: ${g.why})`).join("\n") || "- لا فجوات";
+  const prompt = `أنت «مستشار المنح» في منصة «قدمها»: تحاور جمعية سعودية بالصوت لتجهيز طلب منحة. حوّل كلام المستخدم (قد يكون عاميًا ومنقولًا من الصوت) إلى إجراءات منظمة على الملف بصياغة مهنية جاهزة للطلب، وأجب باختصار بالعربية (جملتان أو ثلاث) كخبير يعطي نصيحة عملية. إن سأل سؤالًا عن المنح أو المانحين أو عمل الجمعيات فأجبه كخبير بإيجاز.
+${KNOWLEDGE}
+
+الفجوات المهمة الآن مرتبة بأثرها (اسأل عن واحدة فقط — الأهم التي لم يجب عنها المستخدم في كلامه الحالي):
+${gapList}
 قواعد: لا تختلق معلومات عن الجمعية أو إنجازاتها أو شراكاتها؛ استخدم فقط ما قاله المستخدم أو الموجود في الحالة. اسأل فقط عن الناقص الذي يحتاجه الطلب ولا تسأل عن معلومة موجودة. الشراكات تبقى مقترحة. المنحة: ${GRANT.name}؛ الأولويات: ${GRANT.priorities.join("، ")}؛ المناطق: الرياض والقصيم؛ السقف 500,000 ر.س؛ أقصى مدة 12 شهرًا؛ مساهمة ≥10%؛ مستبعد من المانح: الضيافة والولائم والأراضي والمباني ورواتب الإدارة العليا.
 
 الحالة:
@@ -892,7 +956,8 @@ ${recent}
 
 كلام المستخدم الآن: «${text}»
 
-أعد JSON فقط: {"reply":"...","actions":[...],"go":null}
+أعد JSON فقط: {"reply":"...","actions":[...],"question":{"q":"سؤال واحد قصير","why":"لماذا يهم المقيّم","quick":["إجابة مقترحة قصيرة بلسان الجمعية","..."]} أو null,"go":null}
+اجعل quick من 2 إلى 3 إجابات واقعية مبنية على الحالة، ولا تضع فيها أرقامًا مختلقة تُنسب للجمعية إلا كأمثلة واضحة يمكن تعديلها.
 الإجراءات المسموحة:
 {"type":"set_org","field":"name|entity|regno|supervisor|mission|scope|groups|programs|results|team|resources|contact","value":"..."}
 {"type":"set_param","beneficiaries":رقم أو null,"duration":رقم أو null,"region":"منطقة الرياض|منطقة القصيم|منطقة مكة المكرمة|المنطقة الشرقية" أو null}
@@ -905,6 +970,10 @@ ${recent}
 {"type":"remove_line","item":"اسم بند موجود"}
 {"type":"set_answer","index":0,"value":"الإجابة كاملة ضمن الحد"}
 {"type":"confirm_exp","value":"الدليل"}
+{"type":"set_baseline","value":"طريقة أو قيمة خط الأساس لمؤشرات النتائج"}
+{"type":"set_deadline","index":0 أو 1}
+{"type":"partner","op":"planned|remove"}
+{"type":"generate_draft"} (عندما يوافق المستخدم على كتابة المسودة)
 "go" اختياري لنقل المستخدم لمرحلة: sources|profile|eligibility|project|budget|answers|review. للأسئلة العامة أجب بلا إجراءات.`;
   return await sample.json(prompt, { modelTier: "default", cache: false });
 }
@@ -919,14 +988,14 @@ function understandRules(text) {
   const b = num(/(\d[\d,]*)\s*(?:شاب|مستفيد|متدرب)(?!\s*في الرياض،\s*\d)/);
   let d = num(/(\d+)\s*(?:شهر|أشهر)/); if (!d && /خلال\s*(?:سنة|سنه|عام)/.test(t)) d = 12;
   const region = /الرياض/.test(t) ? "منطقة الرياض" : /القصيم/.test(t) ? "منطقة القصيم" : /جدة|مكة/.test(t) ? "منطقة مكة المكرمة" : /الشرقية|الدمام/.test(t) ? "المنطقة الشرقية" : null;
-  const isSurvey = /استبيان/.test(t);
+  const isSurvey = /استبيان|قائمة انتظار/.test(t);
   if (!isSurvey && (b || d || (region && !S.params.region))) actions.push({ type: "set_param", beneficiaries: b, duration: d, region: S.params.region ? null : region });
   if (region && !S.org.scope?.value && !isSurvey) actions.push({ type: "set_org", field: "scope", value: region });
   if (/الشباب|شباب/.test(t) && !S.org.groups?.value && !isSurvey) actions.push({ type: "set_org", field: "groups", value: "الشباب" });
   const idea = t.match(/(?:بفكرة|فكرتنا|فكرة)\s+([^،,.]+)/); if (idea) actions.push({ type: "set_idea", value: idea[1].trim() });
   const sup = t.match(/الجهة المشرفة\s+([^،,]+?)(?=،|,|\s+والتواصل|$)/); if (sup) actions.push({ type: "set_org", field: "supervisor", value: sup[1].trim() });
   const mail = t.match(/[\w.+-]+@[\w.-]+\.\w+/); if (mail) actions.push({ type: "set_org", field: "contact", value: mail[0] });
-  if (isSurvey && S.project) actions.push({ type: "set_section", key: "problem", value: S.project.problem.replace(/\[يحتاج استكمال[^\]]*\]/, `ويؤكد ذلك ${t.replace(/^عندنا\s*/, "أن لدى الجمعية ")} (تصريح من الجمعية — تُرفق نتائج الاستبيان).`) });
+  if (isSurvey && S.project) actions.push({ type: "set_section", key: "problem", value: S.project.problem.replace(/\[يحتاج استكمال[^\]]*\]/, `ويؤكد ذلك ${t.replace(/^عندنا\s*/, "أن لدى الجمعية ")} (تصريح من الجمعية — يُرفق ما يثبته).`) });
   const exp = t.match(/خبرة\s+(?:من|منذ)\s+20\d\d[^،.]*/); if (exp) actions.push({ type: "confirm_exp", value: exp[0] });
   if (/قاعات|قاعة/.test(t) && /نساهم|مساهمة/.test(t)) actions.push({ type: "add_line", item: "قاعات الجمعية التدريبية", desc: "مساهمة عينية: قاعتان طوال المدة", qty: 1, cost: 3000, periods: S.params.duration || 12, src: "SELF", kind: "IN_KIND", activity: null });
   const addAct = t.match(/أضف نشاط\s+([^،,]+?)(?=\s+و\S|،|$)/); if (addAct) { const D = S.params.duration || 12; actions.push({ type: "add_activity", name: addAct[1].trim(), start: Math.max(1, D - 4), end: Math.max(2, D - 1), outputs: "حدّد المخرجات" }); }
@@ -935,8 +1004,28 @@ function understandRules(text) {
   if (/الضيافة/.test(t) && /(انقل|على الجمعية)/.test(t)) { const l = S.lines.find((x) => x.item.includes("ضيافة")); if (l) actions.push({ type: "update_line", item: l.item, src: "SELF" }); }
   const del = t.match(/احذف بند\s+([^،,]+)/); if (del) { const key = del[1].trim().replace(/^ال/, ""); const l = S.lines.find((x) => x.item.includes(key)); if (l) actions.push({ type: "remove_line", item: l.item }); }
   if (/اختصر/.test(t) && S.answers[0]) actions.push({ type: "set_answer", index: 0, value: S.answers[0].text.split("، عبر")[0] + "." });
+  if (/يحتاجون|يعانون/.test(t) && !S.idea.seed && !idea && !isSurvey) actions.push({ type: "set_idea", value: t });
+  if (/اكتب المسودة/.test(t) && !/^لا/.test(t)) actions.push({ type: "generate_draft" });
+  if (/ما عندنا دليل|لا يوجد دليل/.test(t) && S.project) {
+    actions.push({ type: "set_section", key: "problem", value: S.project.problem.replace(/\[يحتاج استكمال[^\]]*\]/, "لا يتوفر حاليًا دليل كمي موثق، وستُجري الجمعية تقييم احتياج سريعًا في الشهر الأول لتأكيد الفجوة وتحديد خط الأساس.") });
+    actions.push({ type: "add_activity", name: "تقييم الاحتياج وخط الأساس", start: 1, end: 1, outputs: "تقرير تقييم احتياج" });
+  }
+  if (/تتحمله الجمعية/.test(t)) S.lines.filter(isExcluded).forEach((l) => actions.push({ type: "update_line", item: l.item, src: "SELF" }));
+  if (/^احذفه/.test(t)) S.lines.filter(isExcluded).forEach((l) => actions.push({ type: "remove_line", item: l.item }));
+  if (/وقت متطوعين|وقت متطوعينا/.test(t)) actions.push({ type: "add_line", item: "وقت متطوعي الجمعية", desc: "مساهمة عينية — قيمة تقديرية عدّلها حسب ساعات التطوع الفعلية", qty: 1, cost: 2000, periods: S.params.duration || 12, src: "SELF", kind: "IN_KIND", activity: null });
+  if (/اختبار قبلي/.test(t)) actions.push({ type: "set_baseline", value: "يُقاس باختبار قبلي في الشهر الأول" });
+  if (/31 يناير/.test(t)) actions.push({ type: "set_deadline", index: 0 }); else if (/15 فبراير/.test(t)) actions.push({ type: "set_deadline", index: 1 });
+  if (/لم نتواصل|مخطط لها/.test(t)) actions.push({ type: "partner", op: "planned" }); else if (/احذف الشراكة/.test(t)) actions.push({ type: "partner", op: "remove" });
+  let goTo = /سأرفعها/.test(t) ? "profile" : /سأرفعه/.test(t) ? "sources" : null;
   let reply;
-  if (/اشرح|وش تسوي|كيف تعمل/.test(t)) reply = "أجمع معلومات جمعيتك من ملفاتها ومن حديثك، وأقرأ متطلبات المنحة، ثم أكتب مسودة كاملة: المشروع والأنشطة والمؤشرات والميزانية وإجابات النموذج. أنت تراجع وتعدّل، وأنبهك للنواقص والتعارضات حتى يصير الملف جاهزًا للتصدير. ابدأ بالحديث عن جمعيتك وفكرتك.";
+  if (/كيف.*مؤشر|مؤشر جيد/.test(t)) reply = "المؤشر الجيد محدد وقابل للقياس، وله خط أساس ومستهدف ومصدر تحقق وتوقيت. مثال: «نسبة المتدربين الذين يحققون 70% فأكثر في الاختبار البعدي: من 0% إلى 60% خلال 8 أشهر، المصدر سجل الاختبارات». وفرّق بين المخرج (عدد المتدربين) والنتيجة (تحسن المهارة).";
+  else if (/رفض|يرفض/.test(t)) reply = "أشهر أسباب الرفض: حاجة بلا دليل، أهداف عامة غير قابلة للقياس، ميزانية منفصلة عن الأنشطة أو مبالغ فيها، بنود مستبعدة، تجاوز السقف أو حدود الكلمات، وشراكات تُذكر بلا إثبات. أفحص طلبك ضد هذه كلها.";
+  else if (/كيف.*(الحاجة|المشكلة)/.test(t)) reply = "اكتب الحاجة كفجوة مقاسة: من المتأثر، كم عددهم، وما الدليل (استبيان، إحصاء رسمي، قائمة انتظار) ومصدره وتاريخه. تجنب العبارات العامة مثل «حاجة ماسة» بلا رقم.";
+  else if (/كيف.*الاستدامة|وش الاستدامة/.test(t)) reply = "الاستدامة المقنعة ثلاثة أبعاد: مؤسسية (دمج المشروع في برامج الجمعية)، مالية (مصادر بديلة واقعية لا وعود)، ومجتمعية (متطوعون وخريجون يواصلون). المقيّم يرفض «سنبحث عن ممولين» بلا خطة.";
+  else if (/^لا،? عندي/.test(t)) reply = "تفضل، أسمعك.";
+  else if (/نتائج اختبار من دفعة/.test(t)) reply = "ممتاز — هذا خط أساس أقوى. ما متوسط الدرجة في تلك الدفعة؟ اكتبه في خانة «خط الأساس» في صفحة المشروع.";
+  else if (/سأرفع/.test(t)) reply = "تمام. نقلتك لمكان الرفع.";
+  else if (/اشرح|وش تسوي|كيف تعمل/.test(t)) reply = "أجمع معلومات جمعيتك من ملفاتها ومن حديثك، وأقرأ متطلبات المنحة، ثم أكتب مسودة كاملة: المشروع والأنشطة والمؤشرات والميزانية وإجابات النموذج. أنت تراجع وتعدّل، وأنبهك للنواقص والتعارضات حتى يصير الملف جاهزًا للتصدير. ابدأ بالحديث عن جمعيتك وفكرتك.";
   else if (/الناقص/.test(t)) { const r = readiness(); reply = r.blockers.length ? "المتبقي الآن: " + r.blockers.slice(0, 6).map((x) => x.label).join("، ") + (r.blockers.length > 6 ? ` و${r.blockers.length - 6} أخرى في صفحة المراجعة.` : ".") : "لا ينقص شيء؛ الملف جاهز للمراجعة النهائية والتصدير."; }
   else if (/متسق/.test(t)) { const c = consistency(); reply = c.length ? "وجدتُ تعارضات: " + c.map((x) => x.label + " — " + x.msg).join("؛ ") : "لم أجد تعارضًا بين الأقسام."; }
   else if (/الحدود/.test(t)) reply = S.answers.map((a, i) => `${i + 1}) ${count(a)} / ${GRANT.questions[a.q].limit}`).join(" · ") || "لا إجابات بعد.";
@@ -944,24 +1033,30 @@ function understandRules(text) {
   else if (/المساهمة/.test(t)) reply = "يمكن تغطيتها بمساهمة عينية من قاعات الجمعية أو وقت فريقها، أو بشريك مقترح بعد اتفاق موثق. قل مثلًا: «نقدر نساهم بقاعاتنا».";
   else if (actions.length) reply = "فهمتُ التالي. راجعه وطبّق ما تراه صحيحًا:";
   else reply = "لم أستخرج معلومة محددة من كلامك في وضع المحاكاة. جرّب جملة مثل: «المستفيدون 200 والمدة 10 أشهر» أو «أضف نشاط ورش توظيف».";
-  return { reply, actions, go: null };
+  const skipQ = /^لا،? عندي|نتائج اختبار من دفعة|سأرفع/.test(t);
+  const g = !actions.length && !skipQ ? gaps()[0] : null;
+  return { reply, actions, go: goTo, question: g ? { q: g.q, why: g.why, quick: g.quick } : null };
 }
 
-const ACTION_TYPES = ["set_org", "set_param", "set_idea", "set_section", "add_activity", "remove_activity", "add_line", "update_line", "remove_line", "set_answer", "confirm_exp"];
+const ACTION_TYPES = ["set_org", "set_param", "set_idea", "set_section", "add_activity", "remove_activity", "add_line", "update_line", "remove_line", "set_answer", "confirm_exp", "set_baseline", "set_deadline", "partner", "generate_draft"];
 function validAction(a) { return a && typeof a === "object" && ACTION_TYPES.includes(a.type); }
 function describeAction(a) {
   switch (a.type) {
     case "set_org": return `${ORG_FIELDS.find((f) => f[0] === a.field)?.[1] || a.field}: ${a.value}`;
     case "set_param": return [a.beneficiaries && `المستفيدون: ${a.beneficiaries}`, a.duration && `المدة: ${a.duration} شهرًا`, a.region && `المنطقة: ${a.region}`].filter(Boolean).join(" · ") || "لا تغيير";
     case "set_idea": return `الفكرة: ${a.value}`;
-    case "set_section": return `تحديث «${SECTION_LABEL[a.key] || a.key}» (يظهر قبل/بعد): ${String(a.value).slice(0, 120)}${String(a.value).length > 120 ? "…" : ""}`;
+    case "set_section": return `تحديث «${SECTION_LABEL[a.key] || a.key}» : ${String(a.value).slice(0, 160)}${String(a.value).length > 120 ? "…" : ""}`;
     case "add_activity": return `إضافة نشاط: ${a.name} (الأشهر ${a.start}–${a.end})`;
     case "remove_activity": return `حذف نشاط: ${a.name}`;
     case "add_line": return `إضافة بند: ${a.item} — ${a.qty} × ${a.cost} ر.س${a.periods > 1 ? " × " + a.periods : ""} (${srcName(a.src)})`;
     case "update_line": return `تعديل بند «${a.item}»: ${[a.qty != null && `الكمية ${a.qty}`, a.cost != null && `التكلفة ${a.cost} ر.س`, a.periods != null && `الفترات ${a.periods}`, a.src && `المصدر ${srcName(a.src)}`, a.desc && "الوصف"].filter(Boolean).join("، ")}`;
     case "remove_line": return `حذف بند: ${a.item}`;
-    case "set_answer": return `إجابة السؤال ${+a.index + 1} (يظهر قبل/بعد): ${String(a.value).slice(0, 110)}…`;
+    case "set_answer": return `إجابة السؤال ${+a.index + 1} : ${String(a.value).slice(0, 160)}…`;
     case "confirm_exp": return `دليل الخبرة: ${a.value}`;
+    case "set_baseline": return `خط أساس مؤشرات النتائج: ${a.value}`;
+    case "set_deadline": return `الموعد المعتمد: ${GRANT.deadline[+a.index ? 1 : 0][0]}`;
+    case "partner": return a.op === "remove" ? "حذف الشراكة المقترحة" : "تسجيل الشراكة «مخطط لها — لم يُتواصل بعد»";
+    case "generate_draft": return "كتابة المسودة الكاملة الآن";
   }
   return a.type;
 }
@@ -973,14 +1068,18 @@ function applyActions(list) {
       if (a.type === "set_org" && ORG_FIELDS.some((f) => f[0] === a.field) && a.value) { S.org[a.field] = { value: String(a.value), prov: "voice", src: "حديثك مع المساعد" }; done.push(ORG_FIELDS.find((f) => f[0] === a.field)[1]); }
       else if (a.type === "set_param") done.push(...setParams({ beneficiaries: +a.beneficiaries || null, duration: +a.duration || null, region: a.region || null }));
       else if (a.type === "set_idea") { S.idea.seed = String(a.value); done.push("الفكرة"); }
-      else if (a.type === "set_section" && S.project && SECTION_LABEL[a.key]) { S.proposals.push({ target: "project", key: a.key, label: SECTION_LABEL[a.key], before: S.project[a.key] || "", after: String(a.value), why: "من حديثك" }); done.push(`مقترح لتحديث «${SECTION_LABEL[a.key]}» في المراجعة`); }
+      else if (a.type === "set_section" && S.project && SECTION_LABEL[a.key]) { S.project[a.key] = String(a.value); (S.project.prov ||= {})[a.key] = "voice"; markStale(); done.push(`حُدّث «${SECTION_LABEL[a.key]}» — عدّله في صفحة المشروع إن لزم`); }
       else if (a.type === "add_activity") { S.activities.push({ id: uid(), name: String(a.name), start: Math.max(1, +a.start || 1), end: Math.max(+a.start || 1, +a.end || 1), outputs: String(a.outputs || ""), prov: "voice" }); markStale(); done.push("نشاط جديد — اربطه ببند في الميزانية"); }
       else if (a.type === "remove_activity") { const x = S.activities.find((y) => y.name.includes(a.name) || String(a.name).includes(y.name)); if (x) { removeActivity(x.id); done.push("حُذف نشاط"); } }
       else if (a.type === "add_line") { const act = a.activity ? S.activities.find((y) => y.name.includes(a.activity)) : null; S.lines.push({ id: uid(), item: String(a.item), desc: String(a.desc || ""), activityId: act?.id || null, unit: "", qty: Math.max(0, +a.qty || 0), unit_cost: Math.round((+a.cost || 0) * 100), periods: Math.max(1, +a.periods || 1), src: ["DONOR", "SELF", "PARTNER"].includes(a.src) ? a.src : "DONOR", kind: a.kind === "IN_KIND" || a.src === "PARTNER" ? "IN_KIND" : "CASH", prov: "voice" }); done.push("بند جديد في الميزانية"); }
       else if (a.type === "update_line") { const l = findLine(a.item); if (l) { if (a.qty != null) { l.qty = Math.max(0, +a.qty); l.followB = false; } if (a.cost != null) l.unit_cost = Math.round(+a.cost * 100); if (a.periods != null) { l.periods = Math.max(1, +a.periods); l.followD = false; } if (["DONOR", "SELF", "PARTNER"].includes(a.src)) { l.src = a.src; l.kind = a.src === "PARTNER" ? "IN_KIND" : a.src === "DONOR" ? "CASH" : l.kind; } if (a.desc) l.desc = String(a.desc); l.prov = "voice"; done.push(`عُدّل «${l.item}»`); } }
       else if (a.type === "remove_line") { const l = findLine(a.item); if (l) { S.lines = S.lines.filter((y) => y !== l); done.push(`حُذف «${l.item}»`); } }
-      else if (a.type === "set_answer") { const ans = S.answers[+a.index]; if (ans) { S.proposals.push({ target: "answer", key: +a.index, label: "إجابة: " + GRANT.questions[ans.q].q, before: ans.text, after: String(a.value), why: "من حديثك" }); done.push("مقترح لإجابة في المراجعة"); } }
+      else if (a.type === "set_answer") { const ans = S.answers[+a.index]; if (ans) { ans.text = String(a.value); ans.approved = false; ans.stale = false; ans.prov = "voice"; done.push(`حُدّثت إجابة السؤال ${+a.index + 1} — راجعها واعتمدها`); } }
       else if (a.type === "confirm_exp") { S.eligDecisions.exp = String(a.value); done.push("دليل الخبرة"); }
+      else if (a.type === "set_baseline") { S.indicators.forEach((x) => { if (x.type === "نتيجة" && !x.baseline) x.baseline = String(a.value); }); done.push("خط الأساس"); }
+      else if (a.type === "set_deadline") { const [v, s] = GRANT.deadline[+a.index ? 1 : 0]; S.deadline = `${v} (${s})`; done.push("الموعد النهائي"); }
+      else if (a.type === "partner" && S.project) { if (a.op === "remove") S.project.partners = []; else S.project.partners.forEach((x) => { if (x.status === "مقترح") x.status = "مخطط لها — لم يُتواصل بعد"; }); done.push("الشراكة"); }
+      else if (a.type === "generate_draft") { setTimeout(() => generateDraft(null), 0); done.push("جارٍ كتابة المسودة"); }
     } catch {}
   }
   if (done.length) S.approvedAt = null;
@@ -1000,11 +1099,13 @@ const VIEWS = {
   start: () => `
     <section class="hero">
       <span class="chip neutral">من معلومات جمعيتك وفكرتك ومتطلبات المنحة إلى ملف تقديم متكامل</span>
-      <h1>تحدّث عن جمعيتك وفكرتك… ونحن نكتب الطلب</h1>
-      <p class="lead">اضغط المايك واشرح ما تعملون عليه بكلامك العادي، أو اكتب. يجمع المساعد ما قلته مع ملفات جمعيتك ومتطلبات المنحة، ثم يكتب مسودة كاملة تراجعها وتعدلها.</p>
+      <h1>مستشار المنح الذكي… تحدّث معه</h1>
+      <p class="lead">ليس مسجّل صوت: مستشار ذكاء اصطناعي يعرف كيف تُكتب طلبات المنح وما يبحث عنه المقيّمون والجهات المانحة. يسألك السؤال الصحيح بترتيب ما يؤثر في التقييم، ويشرح لماذا يسأل، ويحوّل إجاباتك إلى صياغة جاهزة داخل الطلب.</p>
+      <div class="expert"><span>المنح والجهات المانحة</span><span>عمل الجمعيات والحوكمة</span><span>الإطار المنطقي والمؤشرات</span><span>الميزانية والمساهمة الذاتية</span><span>أسباب الرفض الشائعة</span></div>
       <button type="button" class="mic" id="hero-mic" aria-label="تحدث مع المساعد">${MIC_SVG}</button>
       <div class="wave" id="hero-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       <div class="mic-caption" id="mic-caption">${CAP.voice === "sim" ? "الصوت هنا محاكاة: يُشغَّل كلام مثال وتعالجه المنصة كأنك قلته" : "اضغط وتحدث — مثال: «نحن جمعية في الرياض نعمل مع الشباب…»"}</div>
+      <div class="row"><button class="btn gold" id="start-interview">ابدأ المقابلة — المستشار يسألك</button></div>
       <div class="row" style="width:100%;max-width:620px;flex-wrap:nowrap">
         <label class="sr-only" for="hero-text">أو اكتب</label>
         <input type="text" id="hero-text" placeholder="أو اكتب: نحن جمعية… ونريد التقديم على…">
@@ -1271,6 +1372,7 @@ function each(sel, fn, ev = "onclick") { document.querySelectorAll(sel).forEach(
 function bind() {
   each("[data-go]", (b) => go(b.dataset.go));
   on("#hero-mic", () => { openDrawer(true); micPress(); });
+  on("#start-interview", startInterview);
   on("#hero-send", () => { const v = $("#hero-text").value.trim(); if (v) { $("#hero-text").value = ""; handleInput(v, "text"); } });
   on("#hero-text", (e) => { if (e.key === "Enter") $("#hero-send").click(); }, "onkeydown");
   // المصادر
@@ -1447,11 +1549,18 @@ $("#close-drawer").onclick = () => openDrawer(false);
 $("#mic-sm").onclick = () => micPress();
 $("#send").onclick = () => { const v = $("#msg").value.trim(); if (v) { $("#msg").value = ""; handleInput(v, "text"); } };
 $("#msg").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#send").click(); } };
+$("#conv-toggle").onclick = () => {
+  convMode = !convMode; $("#conv-toggle").setAttribute("aria-pressed", String(convMode));
+  $("#conv-toggle").textContent = convMode ? "🎧 محادثة صوتية: تعمل" : "🎧 محادثة صوتية";
+  if (convMode && !ttsOn) $("#tts-toggle").click();
+  addAI(convMode ? (CAP.voice === "sim" ? "المحادثة الصوتية مفعلة: أقرأ أسئلتي بصوت. الاستماع هنا محاكاة، فأجب بالضغط على إجابة مقترحة أو بالمايك." : "المحادثة الصوتية مفعلة: أقرأ السؤال بصوت ثم أستمع لإجابتك تلقائيًا.") : "أوقفتُ المحادثة الصوتية.");
+  if (convMode) askNext();
+};
 $("#tts-toggle").onclick = () => { ttsOn = !ttsOn; $("#tts-toggle").setAttribute("aria-pressed", String(ttsOn)); $("#tts-toggle").textContent = ttsOn ? "🔊 قراءة الردود" : "🔈 قراءة الردود"; if (!ttsOn) try { speechSynthesis.cancel(); } catch {} };
 $("#reset").onclick = () => { S = freshState(); simIdx = {}; S.chat.push({ role: "ai", text: GREETING }); try { localStorage.removeItem("qaddimha-demo-v2"); } catch {} if (location.hash === "#start") render(); else location.hash = "start"; };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drawerOpen) openDrawer(false); });
 
-const GREETING = "أهلًا! أنا مساعد قدمها. أخبرني عن جمعيتك وفكرتك بالصوت أو الكتابة، وسأحوّل كلامك إلى مسودة طلب منحة كاملة. سأسأل عن الناقص فقط.";
+const GREETING = "أهلًا! أنا مستشار المنح في قدمها. أعرف كيف تُكتب طلبات المنح وما يبحث عنه المقيّمون. تحدث عن جمعيتك وفكرتك، أو اضغط «ابدأ المقابلة» وأسألك أنا بالترتيب الصحيح.";
 if (!S.chat.length) S.chat.push({ role: "ai", text: GREETING });
 render();
 (async () => {
