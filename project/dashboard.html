@@ -1,0 +1,273 @@
+<title>لوحة مشروع قدمها</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script>document.documentElement.lang = "ar"; document.documentElement.dir = "rtl";</script>
+<style>
+/* أسلوب أبل: خط النظام، بطاقات زجاجية، Segmented Control، ألوان دلالية */
+:root {
+  --bg: #F5F5F7; --card: rgba(255,255,255,.72); --card-solid: #FFFFFF; --fg: #1D1D1F; --muted: #8E8E93; --line: rgba(60,60,67,.12);
+  --red: #FF3B30; --orange: #FF9500; --green: #34C759; --blue: #007AFF; --gray: #8E8E93;
+  --seg: rgba(118,118,128,.12); --seg-on: #FFFFFF; --shadow: 0 4px 24px rgba(0,0,0,.06);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Arabic", "SF Pro Text", "Segoe UI", Tahoma, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #000000; --card: rgba(28,28,30,.72); --card-solid: #1C1C1E; --fg: #F5F5F7; --muted: #98989D; --line: rgba(84,84,88,.5);
+  --red: #FF453A; --orange: #FF9F0A; --green: #30D158; --blue: #0A84FF; --gray: #98989D;
+  --seg: rgba(118,118,128,.24); --seg-on: #636366; --shadow: 0 4px 24px rgba(0,0,0,.4); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #000000; --card: rgba(28,28,30,.72); --card-solid: #1C1C1E; --fg: #F5F5F7; --muted: #98989D; --line: rgba(84,84,88,.5);
+  --red: #FF453A; --orange: #FF9F0A; --green: #30D158; --blue: #0A84FF; --gray: #98989D;
+  --seg: rgba(118,118,128,.24); --seg-on: #636366; --shadow: 0 4px 24px rgba(0,0,0,.4); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { direction: rtl; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 36px 56px; display: grid; gap: 22px; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1.1; }
+h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.muted { color: var(--muted); font-size: .86rem; }
+.tab { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+.head { display: grid; gap: 10px; }
+.blocker { font-size: 1.12rem; }
+.blocker b { color: var(--red); font-weight: 600; }
+.goal { display: inline-flex; gap: 8px; align-items: center; width: fit-content; max-width: 100%; background: color-mix(in srgb, var(--blue) 12%, transparent); color: var(--blue); border-radius: 999px; padding: 4px 14px; font-size: .86rem; font-weight: 600; }
+
+.card { background: var(--card); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 20px; min-width: 0; transition: transform .25s ease, box-shadow .25s ease; }
+.card.hover:hover { transform: scale(1.015); }
+.enter { animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { transform: translateY(10px); opacity: .001; } to { transform: none; opacity: 1; } }
+
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { display: grid; gap: 2px; padding: 16px 18px; }
+.kpi b { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.kpi span { color: var(--muted); font-size: .84rem; }
+
+.seg { display: flex; background: var(--seg); border-radius: 10px; padding: 2px; width: fit-content; max-width: 100%; overflow-x: auto; }
+.seg button { border: 0; background: transparent; color: var(--fg); font: inherit; font-size: .9rem; font-weight: 500; padding: 6px 18px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.seg button[aria-selected="true"] { background: var(--seg-on); box-shadow: 0 1px 4px rgba(0,0,0,.14); font-weight: 600; }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.stack { display: grid; gap: 16px; }
+
+.chain { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.link { border-radius: 14px; padding: 10px 14px; font-size: .9rem; font-weight: 600; border: 1.5px solid var(--line); display: grid; gap: 2px; }
+.link small { font-weight: 400; color: var(--muted); font-size: .76rem; }
+.link.stop { border-color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); }
+.link.wait { color: var(--muted); }
+.arrow { color: var(--muted); }
+
+.bars { display: grid; gap: 10px; margin-top: 12px; }
+.bar { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px; gap: 10px; align-items: center; border: 0; background: transparent; font: inherit; color: inherit; text-align: start; padding: 4px; border-radius: 10px; cursor: pointer; }
+.bar:hover { background: var(--seg); }
+.bar[aria-pressed="true"] { background: color-mix(in srgb, var(--blue) 12%, transparent); }
+.bar .track { height: 12px; background: var(--seg); border-radius: 6px; overflow: hidden; display: flex; }
+.bar .track i { display: block; height: 100%; }
+.bar b { font-weight: 600; text-align: left; }
+
+.tablebox { overflow-x: auto; margin-top: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th { text-align: right; color: var(--muted); font-weight: 500; font-size: .78rem; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.id { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: .76rem; font-weight: 600; white-space: nowrap; }
+.p-red { color: var(--red); background: color-mix(in srgb, var(--red) 13%, transparent); }
+.p-orange { color: var(--orange); background: color-mix(in srgb, var(--orange) 15%, transparent); }
+.p-green { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+.p-blue { color: var(--blue); background: color-mix(in srgb, var(--blue) 12%, transparent); }
+.p-gray { color: var(--gray); background: color-mix(in srgb, var(--gray) 15%, transparent); }
+tr.r-red td:first-child { box-shadow: inset -4px 0 0 var(--red); }
+tr.r-orange td:first-child { box-shadow: inset -4px 0 0 var(--orange); }
+
+.tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+input[type=search], select { font: inherit; color: var(--fg); background: var(--seg); border: 0; border-radius: 10px; padding: 8px 12px; min-width: 0; }
+input[type=search] { flex: 1 1 220px; }
+.filter-note { display: flex; gap: 8px; align-items: center; font-size: .84rem; color: var(--blue); }
+.filter-note button { border: 0; background: transparent; color: var(--blue); font: inherit; cursor: pointer; text-decoration: underline; }
+
+.people { display: grid; gap: 12px; margin-top: 12px; }
+.person { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px; gap: 10px; align-items: center; font-size: .88rem; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; }
+
+.words { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 600px) { .words { grid-template-columns: minmax(0, 1fr); } }
+.word { display: grid; gap: 4px; }
+.word code, .phrase code { font-family: var(--font); font-weight: 700; color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, transparent); border-radius: 8px; padding: 1px 8px; width: fit-content; }
+ul.rules { margin: 10px 0 0; padding-inline-start: 18px; display: grid; gap: 8px; }
+.phrase { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; padding-block: 8px; border-bottom: 1px solid var(--line); }
+.phrase:last-child { border-bottom: 0; }
+footer { color: var(--muted); font-size: .78rem; }
+@media (prefers-reduced-motion: reduce) { .enter { animation: none; } .card { transition: none; } .card.hover:hover { transform: none; } }
+</style>
+
+<div class="wrap">
+  <header class="head enter">
+    <h1>قدمها</h1>
+    <p class="blocker">يوقفنا الآن: <b>نشر موقع العرض على Vercel</b> — بيئة Claude لا تصل إلى Vercel (Q1).</p>
+    <span class="goal">🎯 الهدف: تجربة المستشار الصوتي الحي ثم أول جمعية · الموعد: لم يُحدد</span>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="أرقام المشروع"></section>
+
+  <div class="seg" role="tablist" aria-label="أقسام اللوحة" id="tabs"></div>
+  <main id="view"></main>
+  <footer>المصدر: ملفات project/ في المستودع bokhbokhx/qaddimha · آخر تحديث 2 نوفمبر 2026 · لتحديث اللوحة قل لـ Claude «حدّث اللوحة».</footer>
+</div>
+
+<script>
+// البيانات منقولة من status.md وdecisions.md وrisks.md وبريفات المختصين
+const TASKS = [
+  { id: 1, task: "نشر موقع العرض المستقل demo/ على Vercel (D9)", phase: "النشر", who: "خالد", status: "blocked" },
+  { id: 2, task: "تجربة المحادثة الصوتية بمفتاح Gemini الحقيقي", phase: "التحقق", who: "خالد + Claude", status: "waiting" },
+  { id: 3, task: "تجربة كتابة المسودة بـ Claude عبر الخادم", phase: "التحقق", who: "Claude", status: "waiting" },
+  { id: 4, task: "إزالة الصوت المحاكى من رابط Claude أو وسمه بوضوح (R7)", phase: "العرض", who: "Claude", status: "todo" },
+  { id: 5, task: "اختيار جمعية ومنحة حقيقية للتجربة الأولى (بإذن)", phase: "التجربة", who: "خالد", status: "todo" },
+];
+const STATUS = { blocked: ["متوقف", "p-red", "var(--red)"], waiting: ["ينتظر", "p-orange", "var(--orange)"], todo: ["لم يبدأ", "p-gray", "var(--gray)"], done: ["منتهي", "p-green", "var(--green)"] };
+const CHAIN = [
+  { t: "النشر", s: "Q1 — متوقف", stop: true },
+  { t: "تجربة الصوت", s: "R2" }, { t: "تجربة المسودة", s: "R3" }, { t: "تحسين المستشار", s: "D8" },
+  { t: "السياسات", s: "R4 · R6" }, { t: "أول جمعية", s: "Q5" },
+];
+const DECISIONS = [
+  ["D13", "2026-11-02", "إدارة", "إدارة المشروع بملفات project/ ولوحة تفاعلية واحدة", "مكان واحد لكل معلومة ومراجعة أسبوعية"],
+  ["D12", "2026-11-01", "تقني", "المسارات الخادمية تقبل الطلبات من نفس الموقع فقط", "منع استخدام المفاتيح من مواقع أخرى"],
+  ["D11", "2026-11-01", "تقني", "Gemini Live للصوت، وClaude لكتابة المسودة وفهم النص", "صوت «زي براندي»، وClaude أقوى في الصياغة الطويلة"],
+  ["D10", "2026-11-01", "تقني", "المستشار يحفظ المعلومات أثناء الحديث بأدوات وينقل الشاشة", "تفاعل حي بدل تسجيل صوتي"],
+  ["D9", "2026-11-01", "تقني", "موقع العرض مستقل في demo/ على Vercel لا داخل براندي", "اختيار خالد"],
+  ["D8", "2026-10-31", "منح", "سؤال واحد كل مرة مرتب بأثره على التقييم والأهلية مع سببه", "«يسأل السؤال الصحيح»"],
+  ["D7", "2026-10-30", "منتج", "المسودة أولًا؛ كل معلومة موسومة: مؤكد / مقترح / ناقص", "توفير الوقت بلا اختلاق"],
+  ["D6", "2026-10-30", "منتج", "«إجابات الجهة» تصبح «إجابات طلب المنحة»", "طلب خالد"],
+  ["D5", "2026-10-30", "منح", "الأهلية: إلزامي منفصل عن القابل للتحسين، ولكل فجوة حلول", "طلب خالد"],
+  ["D4", "2026-10-28", "تقني", "مستودع مستقل bokhbokhx/qaddimha", "فصل المنتج عن براندي"],
+  ["D3", "2026-10-27", "مالية", "الدفع محاكى فقط، والمبالغ بالهللة", "لا دفع حقيقي دون إذن"],
+  ["D2", "2026-10-27", "منح", "لا ضمان قبول ولا نسبة فوز ولا اختلاق، ولا «جاهز» مع عائق", "مصداقية المنتج"],
+  ["D1", "2026-10-27", "تقني", "Next.js 16 + Prisma 6 + PostgreSQL، وPDF عبر Chromium", "تطبيق كامل من البداية للنهاية"],
+].map(([id, date, area, text, why]) => ({ id, date, area, text, why, open: false }));
+const OPEN = [
+  ["Q1", "تقني", "طريق النشر: خالد ينشر من Vercel، أو يضيف VERCEL_TOKEN والسماح بـ api.vercel.com", "خالد"],
+  ["Q2", "منتج", "موعد الهدف (تجربة الصوت، ثم أول جمعية)", "خالد"],
+  ["Q3", "تقني", "أين يُستضاف التطبيق الكامل (PostgreSQL وChromium)", "خالد + تقني"],
+  ["Q4", "مالية", "التسعير الحقيقي ومزود الدفع", "خالد + مالية"],
+  ["Q5", "منح", "أي جمعية وأي منحة حقيقية للتجربة الأولى", "خالد + منح"],
+].map(([id, area, text, who]) => ({ id, date: "—", area, text, why: "صاحبه: " + who, open: true }));
+const RISKS = [
+  ["R1", "النشر متوقف: لا وصول لـ Vercel من بيئة Claude", "high", "Q1", "خالد", "—"],
+  ["R2", "المحادثة الصوتية لم تُجرّب بمفتاح Gemini الحقيقي", "high", "تجربة فور النشر وتسجيل النتيجة", "خالد + Claude", "بعد R1"],
+  ["R3", "جودة المسودة على منحة حقيقية غير مقاسة", "high", "تجربة على دليل حقيقي بإذن ومقارنة بطلب كتبه إنسان", "منح", "Q5"],
+  ["R4", "بيانات الجمعيات تُرسل إلى Google وAnthropic", "mid", "موافقة صريحة في الواجهة + سياسة خصوصية", "قانوني", "قبل أول جمعية"],
+  ["R5", "تكلفة المفاتيح عند إساءة الاستخدام", "mid", "منع المواقع الأخرى (D12) + حد استخدام", "تقني", "قبل النشر العام"],
+  ["R6", "سياسة الخصوصية والشروط مسودات", "mid", "مراجعة محامٍ", "قانوني", "قبل أول جمعية"],
+  ["R7", "رابط Claude يعرض صوتًا محاكى", "mid", "إزالته أو وسمه وتوجيه للرابط المنشور", "Claude", "بعد R1"],
+  ["R8", "استضافة التطبيق الكامل تحتاج قاعدة بيانات وChromium", "mid", "Q3", "تقني", "—"],
+];
+const ASSUMPTIONS = ["الجمعيات تفضّل الحديث بالصوت على تعبئة النماذج", "Gemini Live يفهم اللهجة السعودية ويستدعي الأدوات بدقة", "أدلة المنح متوفرة كملفات أو نصوص", "الجمعيات تقبل إرسال بياناتها لمزودي الذكاء الاصطناعي بموافقة"];
+const WORDS = [
+  ["تقني", "المسؤول التقني", "النشر، الاستضافة، المفاتيح، الأمان، الاختبارات", "brief-tech.md"],
+  ["منح", "خبير المنح والجمعيات", "أسئلة المستشار، جودة المسودة، الأهلية والحلول", "brief-grants.md"],
+  ["قانوني", "المستشار القانوني", "الخصوصية، الموافقة، الشروط (توجيه فقط)", "brief-legal.md"],
+  ["مالية", "المسؤول المالي", "التسعير، الدفع، تكلفة الذكاء الاصطناعي", "brief-finance.md"],
+];
+const PHRASES = [
+  ["مراجعة أسبوعية", "وش خلص، وش تأخر وليش، أهم 3 أشياء للأسبوع الجاي، ومراجعة المخاطر"],
+  ["حدّث اللوحة", "يقرأ ملفات project/ ويحدّث هذه اللوحة على نفس الرابط"],
+  ["تقني: …", "يرد بدور المسؤول التقني من بريفه"],
+  ["منح: …", "يرد بدور خبير المنح"],
+  ["بدون كلمة", "مدير المشروع: الصورة كاملة والتنسيق بين المختصين"],
+];
+const RULES = ["مكان واحد لكل معلومة؛ القرارات بأرقامها في decisions.md والملفات تشير إليها.", "لا ملفات handoff جديدة؛ status.md يُحدّث في مكانه.", "كل قرار مهم يُسجّل برقم ويُضاف سطر في سجل البريف المعني.", "كل مختص يتكلم بصراحة من زاويته، وخالد يحسم.", "ثوابت المنتج (D2) لا تُكسر: لا ضمان قبول، لا اختلاق، المجهول يبقى مجهولًا."];
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ui = { phase: null, q: "", area: "", openOnly: false };
+
+// الأرقام الستة
+const kpis = [
+  ["المتأخر", TASKS.filter((t) => t.status === "blocked").length, "var(--red)"],
+  ["مهام الآن", TASKS.length, "var(--blue)"],
+  ["المخاطر العالية", RISKS.filter((r) => r[2] === "high").length, "var(--red)"],
+  ["غير المُتحقق", ASSUMPTIONS.length, "var(--orange)"],
+  ["القرارات المعتمدة", DECISIONS.length, "var(--green)"],
+  ["القرارات المفتوحة", OPEN.length, "var(--orange)"],
+];
+$("#kpis").innerHTML = kpis.map(([l, n, c], i) => `<div class="card kpi hover enter" style="animation-delay:${60 + i * 50}ms"><b class="tab" style="color:${c}">${n}</b><span>${l}</span></div>`).join("");
+
+const TABS = [["status", "الحالة"], ["decisions", "القرارات"], ["risks", "المخاطر"], ["office", "المكتب"]];
+function current() { const h = location.hash.slice(1); return TABS.some((t) => t[0] === h) ? h : "status"; }
+function renderTabs() {
+  const cur = current();
+  $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" aria-selected="${k === cur}" data-tab="${k}">${l}</button>`).join("");
+  $("#tabs").querySelectorAll("button").forEach((b) => (b.onclick = () => { location.hash = b.dataset.tab; }));
+}
+
+function viewStatus() {
+  const phases = [...new Set(TASKS.map((t) => t.phase))];
+  const max = Math.max(...phases.map((p) => TASKS.filter((t) => t.phase === p).length));
+  const people = [...new Set(TASKS.flatMap((t) => t.who.split(" + ")))];
+  const rows = TASKS.filter((t) => !ui.phase || t.phase === ui.phase);
+  return `<div class="stack">
+    <section class="card enter"><h2>الطريق للهدف</h2><p class="muted">الحلقة الحمراء هي اللي توقف السلسلة.</p>
+      <div class="chain">${CHAIN.map((c, i) => `${i ? '<span class="arrow" aria-hidden="true">←</span>' : ""}<div class="link ${c.stop ? "stop" : "wait"}">${c.t}<small>${c.s}</small></div>`).join("")}</div></section>
+    <div class="grid2">
+      <section class="card enter"><h2>المهام حسب المرحلة</h2><p class="muted">اضغط عمودًا لتصفية الجدول.</p>
+        <div class="bars">${phases.map((p) => { const ts = TASKS.filter((t) => t.phase === p); return `<button class="bar" data-phase="${esc(p)}" aria-pressed="${ui.phase === p}"><span>${p}</span><span class="track" style="width:${(ts.length / max) * 100}%">${ts.map((t) => `<i style="flex:1;background:${STATUS[t.status][2]}"></i>`).join("")}</span><b class="tab">${ts.length}</b></button>`; }).join("")}</div></section>
+      <section class="card enter"><h2>مهام كل شخص</h2><p class="muted">كل نقطة مهمة بلون حالتها.</p>
+        <div class="people">${people.map((p) => { const ts = TASKS.filter((t) => t.who.split(" + ").includes(p)); return `<div class="person"><span>${p}</span><span class="dots">${ts.map((t) => `<i title="${esc(t.task)}" style="background:${STATUS[t.status][2]}"></i>`).join("")}</span><b class="tab">${ts.length}</b></div>`; }).join("")}</div>
+        <div class="tools">${Object.values(STATUS).map(([l, c]) => `<span class="pill ${c}">${l}</span>`).join("")}</div></section>
+    </div>
+    <section class="card enter"><h2>جدول المهام</h2>
+      ${ui.phase ? `<div class="filter-note">مصفّى: ${esc(ui.phase)} <button id="clear-phase">عرض الكل</button></div>` : ""}
+      <div class="tablebox"><table><thead><tr><th>#</th><th>المهمة</th><th>المرحلة</th><th>على مين</th><th>الحالة</th></tr></thead>
+      <tbody>${rows.map((t) => `<tr><td class="id tab">${t.id}</td><td>${esc(t.task)}</td><td>${t.phase}</td><td>${t.who}</td><td><span class="pill ${STATUS[t.status][1]}">${STATUS[t.status][0]}</span></td></tr>`).join("")}</tbody></table></div></section>
+  </div>`;
+}
+function viewDecisions() {
+  const all = [...OPEN, ...DECISIONS];
+  const areas = [...new Set(all.map((d) => d.area))];
+  const q = ui.q.trim();
+  const rows = all.filter((d) => (!ui.openOnly || d.open) && (!ui.area || d.area === ui.area) && (!q || (d.id + d.text + d.why).includes(q)));
+  return `<section class="card enter"><h2>القرارات</h2>
+    <div class="tools">
+      <label class="muted" for="dq" style="position:absolute;width:1px;height:1px;overflow:hidden">بحث</label>
+      <input type="search" id="dq" placeholder="ابحث في القرارات…" value="${esc(ui.q)}">
+      <select id="da" aria-label="القسم"><option value="">كل الأقسام</option>${areas.map((a) => `<option ${a === ui.area ? "selected" : ""}>${a}</option>`).join("")}</select>
+      <div class="seg" role="group" aria-label="العرض"><button id="d-all" aria-selected="${!ui.openOnly}">الكل</button><button id="d-open" aria-selected="${ui.openOnly}">مفتوح فقط</button></div>
+    </div>
+    <div class="tablebox"><table><thead><tr><th>#</th><th>التاريخ</th><th>القسم</th><th>القرار</th><th>السبب</th><th>الحالة</th></tr></thead>
+    <tbody>${rows.map((d) => `<tr><td class="id">${d.id}</td><td class="tab" style="white-space:nowrap">${d.date}</td><td>${d.area}</td><td>${esc(d.text)}</td><td class="muted">${esc(d.why)}</td><td><span class="pill ${d.open ? "p-orange" : "p-green"}">${d.open ? "مفتوح" : "معتمد"}</span></td></tr>`).join("") || '<tr><td colspan="6" class="muted">لا نتائج.</td></tr>'}</tbody></table></div></section>`;
+}
+function viewRisks() {
+  return `<div class="stack"><section class="card enter"><h2>المخاطر</h2><p class="muted">مرتبة بالأثر. الأحمر يهدد الهدف، والبرتقالي يضعفه.</p>
+    <div class="tablebox"><table><thead><tr><th>#</th><th>البند</th><th>الأثر</th><th>الحل</th><th>صاحبه</th><th>الموعد</th></tr></thead>
+    <tbody>${RISKS.map(([id, t, imp, fix, who, when]) => `<tr class="${imp === "high" ? "r-red" : "r-orange"}"><td class="id">${id}</td><td>${esc(t)}</td><td><span class="pill ${imp === "high" ? "p-red" : "p-orange"}">${imp === "high" ? "يهدد الهدف" : "يضعفه"}</span></td><td>${esc(fix)}</td><td>${who}</td><td class="muted">${when}</td></tr>`).join("")}</tbody></table></div></section>
+    <section class="card enter"><h2>افتراضات لم تُثبت بعد</h2><ul class="rules">${ASSUMPTIONS.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></section></div>`;
+}
+function viewOffice() {
+  return `<div class="stack">
+    <section class="card enter"><h2>كلمات المختصين</h2><p class="muted">ابدأ رسالتك بالكلمة، فيرد Claude بدور المختص من بريفه.</p>
+      <div class="words" style="margin-top:12px">${WORDS.map(([w, r, d, f]) => `<div class="card hover word"><code>${w}</code><b>${r}</b><span class="muted">${d}</span><span class="muted">${f}</span></div>`).join("")}</div></section>
+    <div class="grid2">
+      <section class="card enter"><h2>جمل البداية</h2>${PHRASES.map(([p, d]) => `<div class="phrase"><code>${p}</code><span class="muted">${d}</span></div>`).join("")}</section>
+      <section class="card enter"><h2>قواعد العمل</h2><ul class="rules">${RULES.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></section>
+    </div></div>`;
+}
+
+function render() {
+  renderTabs();
+  const cur = current();
+  $("#view").innerHTML = { status: viewStatus, decisions: viewDecisions, risks: viewRisks, office: viewOffice }[cur]();
+  document.querySelectorAll("[data-phase]").forEach((b) => (b.onclick = () => { ui.phase = ui.phase === b.dataset.phase ? null : b.dataset.phase; render(); }));
+  const cp = $("#clear-phase"); if (cp) cp.onclick = () => { ui.phase = null; render(); };
+  const dq = $("#dq"); if (dq) dq.oninput = () => { ui.q = dq.value; const pos = dq.selectionStart; render(); const n = $("#dq"); n.focus(); n.setSelectionRange(pos, pos); };
+  const da = $("#da"); if (da) da.onchange = () => { ui.area = da.value; render(); };
+  const dall = $("#d-all"); if (dall) dall.onclick = () => { ui.openOnly = false; render(); };
+  const dop = $("#d-open"); if (dop) dop.onclick = () => { ui.openOnly = true; render(); };
+}
+window.addEventListener("hashchange", render);
+render();
+</script>
