@@ -1205,6 +1205,8 @@ async function startLiveSession() {
       tools: LIVE_TOOLS,
       inputAudioTranscription: {},
       outputAudioTranscription: {},
+      // نفس ضبط براندي: لا يقاطعك المستشار عند توقف قصير وأنت تفكر
+      realtimeInputConfig: { automaticActivityDetection: { endOfSpeechSensitivity: "END_SENSITIVITY_LOW", silenceDurationMs: 1200 } },
     } }));
   };
   liveWs.onmessage = async (ev) => {
