@@ -2347,7 +2347,7 @@ $("#tts-toggle").onclick = () => { ttsOn = !ttsOn; $("#tts-toggle").setAttribute
 $("#reset").onclick = () => { S = freshState(); simIdx = {}; S.chat.push({ role: "ai", text: GREETING }); try { localStorage.removeItem("qaddimha-demo-v2"); } catch {} if (location.hash === "#start") render(); else location.hash = "start"; };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drawerOpen) openDrawer(false); });
 
-const GREETING = "أهلًا! أنا مستشار المنح في قدمها. أعرف كيف تُكتب طلبات المنح وما يبحث عنه المقيّمون. تحدث عن جمعيتك وفكرتك، أو اضغط «ابدأ المقابلة» وأسألك أنا بالترتيب الصحيح.";
+const GREETING = "أهلًا! أنا مستشار المنح في قدمها. اضغط الدائرة وتكلم معي، أو اكتب هنا، وأسألك أنا بالترتيب الصحيح وأكتب الطلب بنفسي.";
 if (!S.chat.length) S.chat.push({ role: "ai", text: GREETING });
 render();
 (async () => {
